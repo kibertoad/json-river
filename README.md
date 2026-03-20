@@ -365,11 +365,27 @@ Each response line is a memory sample `{ timestamp, heapUsed, heapTotal, rss, ex
 node bench/memory-profiler/run-profile.ts [preset]
 ```
 
-Automatically starts the profiler server, runs all approaches against all test files, and produces:
+Automatically starts the profiler server, runs all approaches against all test files for the given preset, and produces:
 - `summary.json` — consolidated peak/baseline/delta per run
 - `chart-data.json` — time-series `{ t, heapUsedMB, rssMB }` per run (ready for charting)
 - `report.txt` — human-readable comparison table
 - `samples/` — raw NDJSON per run
+
+### Chart Generator
+
+```bash
+# Start the server in one terminal:
+node --expose-gc bench/memory-profiler/server.ts
+
+# In another terminal, generate a chart:
+node bench/memory-profiler/chart.ts .test-data/large-jsonl.ndjson --multi --output=results
+```
+
+Connects to the profiler server, runs every registered approach against the given file, and writes results into the output directory:
+- `chart.html` — self-contained HTML comparison chart (heap usage over time)
+- `summary.json` — peak/baseline/delta per approach
+- `chart-data.json` — time-series data for external charting tools
+- `samples/` — raw NDJSON per approach
 
 ## License
 

@@ -1,25 +1,37 @@
-import { compose, type Duplex } from 'node:stream'
+import { compose, type Duplex } from "node:stream";
 
-export { Token, TokenType, StringRole } from './tokens.ts'
+export { Token, TokenType, StringRole } from "./tokens.ts";
 export {
-  OBJECT_START, OBJECT_END,
-  ARRAY_START, ARRAY_END,
-  COLON, COMMA,
-  TRUE, FALSE, NULL,
-  STRING_START_KEY, STRING_START_VALUE,
-  STRING_END_KEY, STRING_END_VALUE,
-} from './tokens.ts'
+  OBJECT_START,
+  OBJECT_END,
+  ARRAY_START,
+  ARRAY_END,
+  COLON,
+  COMMA,
+  TRUE,
+  FALSE,
+  NULL,
+  STRING_START_KEY,
+  STRING_START_VALUE,
+  STRING_END_KEY,
+  STRING_END_VALUE,
+} from "./tokens.ts";
 
-export { JsonParser, UnexpectedCharError, PrematureEndError, type JsonParserOptions } from './parser.ts'
-export { JsonStringifier, type JsonStringifierOptions } from './stringifier.ts'
-export { JsonSerializer } from './serializer.ts'
-export { JsonDeserializer, JSON_NULL } from './deserializer.ts'
+export {
+  JsonParser,
+  UnexpectedCharError,
+  PrematureEndError,
+  type JsonParserOptions,
+} from "./parser.ts";
+export { JsonStringifier, type JsonStringifierOptions } from "./stringifier.ts";
+export { JsonSerializer } from "./serializer.ts";
+export { JsonDeserializer, JSON_NULL } from "./deserializer.ts";
 
-import { JSON_NULL } from './deserializer.ts'
-import { JsonParser, type JsonParserOptions } from './parser.ts'
-import { JsonStringifier, type JsonStringifierOptions } from './stringifier.ts'
-import { JsonSerializer } from './serializer.ts'
-import { JsonDeserializer } from './deserializer.ts'
+import { JSON_NULL } from "./deserializer.ts";
+import { JsonParser, type JsonParserOptions } from "./parser.ts";
+import { JsonStringifier, type JsonStringifierOptions } from "./stringifier.ts";
+import { JsonSerializer } from "./serializer.ts";
+import { JsonDeserializer } from "./deserializer.ts";
 
 /**
  * Creates a composed Transform: string input → JS value output.
@@ -30,7 +42,7 @@ import { JsonDeserializer } from './deserializer.ts'
  * Check with `value === JSON_NULL ? null : value`.
  */
 export function parse(options?: JsonParserOptions): Duplex {
-  return compose(new JsonParser(options), new JsonDeserializer())
+  return compose(new JsonParser(options), new JsonDeserializer());
 }
 
 /**
@@ -38,5 +50,5 @@ export function parse(options?: JsonParserOptions): Duplex {
  * Writable side accepts JS values (objectMode); readable side emits JSON string chunks.
  */
 export function stringify(options?: JsonStringifierOptions): Duplex {
-  return compose(new JsonSerializer(), new JsonStringifier(options))
+  return compose(new JsonSerializer(), new JsonStringifier(options));
 }

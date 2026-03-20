@@ -22,7 +22,9 @@
     "generate-data": "node bench/memory-profiler/generate-json.ts",
     "profile": "node bench/memory-profiler/run-profile.ts",
     "profile:server": "node --expose-gc bench/memory-profiler/server.ts",
-    "profile:chart": "node bench/memory-profiler/chart.ts"
+    "profile:chart": "node bench/memory-profiler/chart.ts",
+    "lint": "oxlint && oxfmt --check src/ test/",
+    "lint:fix": "oxfmt src/ test/"
   },
   "repository": {
     "type": "git",
@@ -34,6 +36,8 @@
     "json-stream-es": "^1.2.1",
     "tinybench": "^6.0.0",
     "typescript": "^5.9.3",
+    "oxfmt": "^0.12.0",
+    "oxlint": "^0.18.0",
     "vitest": "^4.1.0"
   },
   "license": "MIT",

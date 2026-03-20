@@ -23,7 +23,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
-import { Readable, Writable, Transform, type TransformCallback } from 'node:stream'
+import { Writable, Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { JsonParser } from '../../src/parser.ts'
