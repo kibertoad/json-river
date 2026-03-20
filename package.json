@@ -1,0 +1,42 @@
+{
+  "name": "json-river",
+  "version": "0.1.0",
+  "description": "Streaming versions of JSON.parse() and JSON.stringify()",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:memory": "cross-env NODE_OPTIONS=--expose-gc vitest run --config vitest.memory.config.ts",
+    "bench": "vitest bench --config vitest.bench.config.ts",
+    "generate-data": "node bench/memory-profiler/generate-json.ts",
+    "profile": "node bench/memory-profiler/run-profile.ts",
+    "profile:server": "node --expose-gc bench/memory-profiler/server.ts",
+    "profile:chart": "node bench/memory-profiler/chart.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kibertoad/json-river.git"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "cross-env": "^10.1.0",
+    "json-stream-es": "^1.2.1",
+    "tinybench": "^6.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  },
+  "license": "MIT",
+  "author": "Igor Savin",
+  "private": true
+}
