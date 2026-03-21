@@ -21,9 +21,46 @@ import {
 // Internal sentinel — write(null) would throw ERR_STREAM_NULL_VALUES
 const NULL_SENTINEL = Symbol("json-river.serializer.null");
 
+export interface JsonSerializerOptions {
+  /**
+   * How to handle BigInt values.
+   *
+   * - `"error"` (default) — throw a TypeError, matching `JSON.stringify` behavior.
+   * - `"number"` — convert to Number via `Number(value)`. Values beyond
+   *   `Number.MAX_SAFE_INTEGER` will lose precision silently.
+   */
+  bigint?: "error" | "number";
+
+  /**
+   * A replacer that alters serialization behavior, matching `JSON.stringify`'s second argument.
+   *
+   * - **Function** `(key, value) => newValue` — called for every value. Return `undefined`
+   *   to omit an object property; in arrays, `undefined` becomes `null`.
+   * - **Array** of strings/numbers — only these object keys are included (array elements
+   *   are unaffected).
+   */
+  replacer?: ((key: string, value: unknown) => unknown) | (string | number)[];
+}
+
 export class JsonSerializer extends Transform {
-  constructor() {
+  readonly #bigint: "error" | "number";
+  readonly #replacerFn: ((key: string, value: unknown) => unknown) | null;
+  readonly #replacerKeys: Set<string> | null;
+
+  constructor(options?: JsonSerializerOptions) {
     super({ writableObjectMode: true, readableObjectMode: true });
+    this.#bigint = options?.bigint ?? "error";
+
+    if (typeof options?.replacer === "function") {
+      this.#replacerFn = options.replacer;
+      this.#replacerKeys = null;
+    } else if (Array.isArray(options?.replacer)) {
+      this.#replacerFn = null;
+      this.#replacerKeys = new Set(options.replacer.map(String));
+    } else {
+      this.#replacerFn = null;
+      this.#replacerKeys = null;
+    }
   }
 
   // Override write to intercept null (which Node treats as end-of-stream signal)
@@ -40,7 +77,30 @@ export class JsonSerializer extends Transform {
     );
   }
 
-  #serializeValue(value: unknown): void {
+  /**
+   * Apply toJSON() and the function replacer (if any) to a value.
+   * Array replacer is handled separately during object key iteration.
+   */
+  #resolve(value: unknown, key: string): unknown {
+    if (
+      value !== null &&
+      value !== undefined &&
+      typeof value === "object" &&
+      "toJSON" in value &&
+      typeof (value as Record<string, unknown>).toJSON === "function"
+    ) {
+      value = (value as { toJSON(key: string): unknown }).toJSON(key);
+    }
+    if (this.#replacerFn) {
+      value = this.#replacerFn(key, value);
+    }
+    return value;
+  }
+
+  /**
+   * Emit tokens for a value that has already been through #resolve().
+   */
+  #emit(value: unknown): void {
     if (value === null || value === undefined) {
       this.push(NULL);
       return;
@@ -69,6 +129,9 @@ export class JsonSerializer extends Transform {
         this.push(STRING_END_VALUE);
         return;
       case "bigint":
+        if (this.#bigint === "error") {
+          throw new TypeError("Do not know how to serialize a BigInt");
+        }
         this.push({ type: TokenType.NUMBER, value: Number(value) } as Token);
         return;
     }
@@ -77,15 +140,15 @@ export class JsonSerializer extends Transform {
       this.push(ARRAY_START);
       for (let i = 0; i < value.length; i++) {
         if (i > 0) this.push(COMMA);
-        const item = value[i];
+        const resolved = this.#resolve(value[i], String(i));
         if (
-          item === undefined ||
-          typeof item === "function" ||
-          typeof item === "symbol"
+          resolved === undefined ||
+          typeof resolved === "function" ||
+          typeof resolved === "symbol"
         ) {
           this.push(NULL);
         } else {
-          this.#serializeValue(item);
+          this.#emit(resolved);
         }
       }
       this.push(ARRAY_END);
@@ -93,24 +156,18 @@ export class JsonSerializer extends Transform {
     }
 
     if (typeof value === "object") {
-      // Handle toJSON()
-      if (
-        "toJSON" in value &&
-        typeof (value as Record<string, unknown>).toJSON === "function"
-      ) {
-        this.#serializeValue((value as { toJSON(): unknown }).toJSON());
-        return;
-      }
-
       this.push(OBJECT_START);
       let first = true;
       const obj = value as Record<string, unknown>;
-      for (const key of Object.keys(obj)) {
-        const val = obj[key];
+      const keys = this.#replacerKeys
+        ? Object.keys(obj).filter((k) => this.#replacerKeys!.has(k))
+        : Object.keys(obj);
+      for (const objKey of keys) {
+        const resolved = this.#resolve(obj[objKey], objKey);
         if (
-          val === undefined ||
-          typeof val === "function" ||
-          typeof val === "symbol"
+          resolved === undefined ||
+          typeof resolved === "function" ||
+          typeof resolved === "symbol"
         )
           continue;
         if (!first) this.push(COMMA);
@@ -119,11 +176,11 @@ export class JsonSerializer extends Transform {
         this.push({
           type: TokenType.STRING_CHUNK,
           role: StringRole.KEY,
-          value: key,
+          value: objKey,
         } as Token);
         this.push(STRING_END_KEY);
         this.push(COLON);
-        this.#serializeValue(val);
+        this.#emit(resolved);
       }
       this.push(OBJECT_END);
     }
@@ -136,7 +193,11 @@ export class JsonSerializer extends Transform {
     callback: TransformCallback,
   ): void {
     try {
-      this.#serializeValue(value === NULL_SENTINEL ? null : value);
+      const resolved = this.#resolve(
+        value === NULL_SENTINEL ? null : value,
+        "",
+      );
+      this.#emit(resolved);
       callback();
     } catch (err) {
       callback(err as Error);

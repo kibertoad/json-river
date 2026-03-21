@@ -119,4 +119,185 @@ describe("round-trip: serializer edge cases", () => {
     const result = await serializeToString(obj);
     expect(result).toBe(JSON.stringify(obj));
   });
+
+  it("throws on BigInt by default", async () => {
+    await expect(serializeToString(42n)).rejects.toThrow(TypeError);
+    await expect(serializeToString(42n)).rejects.toThrow(
+      "Do not know how to serialize a BigInt",
+    );
+  });
+
+  it("throws on BigInt in object values by default", async () => {
+    await expect(serializeToString({ count: 100n })).rejects.toThrow(TypeError);
+  });
+
+  it("throws on BigInt in arrays by default", async () => {
+    await expect(serializeToString([1n, 2n, 3n])).rejects.toThrow(TypeError);
+  });
+
+  it("converts BigInt to Number with bigint: 'number'", async () => {
+    const result = await serializeToString(42n, { bigint: "number" });
+    expect(result).toBe("42");
+  });
+
+  it("converts BigInt in object values with bigint: 'number'", async () => {
+    const result = await serializeToString(
+      { count: 100n },
+      { bigint: "number" },
+    );
+    expect(result).toBe('{"count":100}');
+  });
+
+  it("converts BigInt in arrays with bigint: 'number'", async () => {
+    const result = await serializeToString([1n, 2n, 3n], { bigint: "number" });
+    expect(result).toBe("[1,2,3]");
+  });
+
+  it("converts large BigInt to Number with precision loss", async () => {
+    const big = 2n ** 53n + 1n;
+    const result = await serializeToString(big, { bigint: "number" });
+    expect(result).toBe(String(Number(big)));
+  });
+});
+
+describe("serializer: function replacer", () => {
+  it("transforms values", async () => {
+    const replacer = (key: string, value: unknown) =>
+      typeof value === "number" ? value * 2 : value;
+    const result = await serializeToString({ a: 1, b: 2 }, { replacer });
+    expect(result).toBe(JSON.stringify({ a: 1, b: 2 }, replacer));
+  });
+
+  it("omits properties when returning undefined", async () => {
+    const replacer = (key: string, value: unknown) =>
+      key === "secret" ? undefined : value;
+    const result = await serializeToString(
+      { name: "Alice", secret: "xyz" },
+      { replacer },
+    );
+    expect(result).toBe(
+      JSON.stringify({ name: "Alice", secret: "xyz" }, replacer),
+    );
+  });
+
+  it("converts undefined to null in arrays", async () => {
+    const replacer = (key: string, value: unknown) =>
+      value === 2 ? undefined : value;
+    const result = await serializeToString([1, 2, 3], { replacer });
+    expect(result).toBe(JSON.stringify([1, 2, 3], replacer));
+  });
+
+  it("handles nested objects", async () => {
+    const replacer = (key: string, value: unknown) =>
+      key === "remove" ? undefined : value;
+    const input = { a: { b: 1, remove: 2 }, c: { remove: 3, d: 4 } };
+    const result = await serializeToString(input, { replacer });
+    expect(result).toBe(JSON.stringify(input, replacer));
+  });
+
+  it("receives root value with empty key", async () => {
+    const keys: string[] = [];
+    const replacer = (key: string, value: unknown) => {
+      keys.push(key);
+      return value;
+    };
+    await serializeToString({ a: 1 }, { replacer });
+    expect(keys[0]).toBe("");
+  });
+
+  it("can replace root value entirely", async () => {
+    const replacer = (key: string, value: unknown) =>
+      key === "" ? { replaced: true } : value;
+    const result = await serializeToString({ original: true }, { replacer });
+    expect(result).toBe(JSON.stringify({ original: true }, replacer));
+  });
+});
+
+describe("serializer: array replacer", () => {
+  it("includes only listed keys", async () => {
+    const result = await serializeToString(
+      { a: 1, b: 2, c: 3 },
+      { replacer: ["a", "c"] },
+    );
+    expect(result).toBe(JSON.stringify({ a: 1, b: 2, c: 3 }, ["a", "c"]));
+  });
+
+  it("does not filter array elements", async () => {
+    const result = await serializeToString([1, 2, 3], { replacer: ["0", "2"] });
+    expect(result).toBe(JSON.stringify([1, 2, 3]));
+  });
+
+  it("handles nested objects", async () => {
+    const input = { a: { x: 1, y: 2 }, b: { x: 3, y: 4 } };
+    const result = await serializeToString(input, { replacer: ["a", "x"] });
+    expect(result).toBe(JSON.stringify(input, ["a", "x"]));
+  });
+
+  it("accepts numbers in the array", async () => {
+    const result = await serializeToString(
+      { "1": "one", "2": "two", "3": "three" },
+      { replacer: [1, 3] },
+    );
+    expect(result).toBe(
+      JSON.stringify({ "1": "one", "2": "two", "3": "three" }, [1, 3]),
+    );
+  });
+});
+
+describe("deserializer: reviver", () => {
+  it("transforms values", async () => {
+    const reviver = (key: string, value: unknown) =>
+      typeof value === "number" ? value * 2 : value;
+    const [result] = await parseToValues('{"a":1,"b":2}', { reviver });
+    expect(result).toEqual(JSON.parse('{"a":1,"b":2}', reviver));
+  });
+
+  it("deletes properties when returning undefined", async () => {
+    const reviver = (key: string, value: unknown) =>
+      key === "remove" ? undefined : value;
+    const [result] = await parseToValues('{"keep":1,"remove":2}', { reviver });
+    expect(result).toEqual(JSON.parse('{"keep":1,"remove":2}', reviver));
+  });
+
+  it("transforms array elements", async () => {
+    const reviver = (key: string, value: unknown) =>
+      typeof value === "number" ? value + 10 : value;
+    const [result] = await parseToValues("[1,2,3]", { reviver });
+    expect(result).toEqual(JSON.parse("[1,2,3]", reviver));
+  });
+
+  it("handles nested objects", async () => {
+    const reviver = (key: string, value: unknown) =>
+      typeof value === "string" ? value.toUpperCase() : value;
+    const input = '{"a":{"b":"hello"},"c":"world"}';
+    const [result] = await parseToValues(input, { reviver });
+    expect(result).toEqual(JSON.parse(input, reviver));
+  });
+
+  it("receives root value with empty key", async () => {
+    const keys: string[] = [];
+    const reviver = (key: string, value: unknown) => {
+      keys.push(key);
+      return value;
+    };
+    await parseToValues('{"a":1}', { reviver });
+    expect(keys[keys.length - 1]).toBe("");
+  });
+
+  it("can replace root value entirely", async () => {
+    const reviver = (key: string, value: unknown) =>
+      key === "" ? "replaced" : value;
+    const [result] = await parseToValues('{"a":1}', { reviver });
+    expect(result).toBe("replaced");
+  });
+
+  it("processes bottom-up (children before parents)", async () => {
+    const order: string[] = [];
+    const reviver = (key: string, value: unknown) => {
+      order.push(key);
+      return value;
+    };
+    await parseToValues('{"a":{"b":1},"c":2}', { reviver });
+    expect(order).toEqual(["b", "a", "c", ""]);
+  });
 });

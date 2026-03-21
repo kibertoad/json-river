@@ -16,24 +16,46 @@ type ContainerState =
   | { type: "object"; object: Record<string, unknown>; key: string }
   | { type: "array"; array: unknown[] };
 
+export interface JsonDeserializerOptions {
+  /**
+   * A reviver function, matching `JSON.parse`'s second argument.
+   *
+   * Called for every key/value pair, innermost first (bottom-up). Return the
+   * value to keep, or `undefined` to delete the property from its parent object.
+   */
+  reviver?: (key: string, value: unknown) => unknown;
+}
+
 export class JsonDeserializer extends Transform {
   #stack: ContainerState[] = [];
   #stringAccumulator = "";
   #keyAccumulator = "";
+  readonly #reviver: ((key: string, value: unknown) => unknown) | null;
 
-  constructor() {
+  constructor(options?: JsonDeserializerOptions) {
     super({ writableObjectMode: true, readableObjectMode: true });
+    this.#reviver = options?.reviver ?? null;
   }
 
   #emitValue(value: unknown): void {
     if (this.#stack.length === 0) {
+      if (this.#reviver) {
+        value = this.#reviver("", value);
+      }
       // push(null) would signal EOF in objectMode — use sentinel
       this.push(value === null ? JSON_NULL : value);
     } else {
       const parent = this.#stack[this.#stack.length - 1];
       if (parent.type === "object") {
+        if (this.#reviver) {
+          value = this.#reviver(parent.key, value);
+          if (value === undefined) return;
+        }
         parent.object[parent.key] = value;
       } else {
+        if (this.#reviver) {
+          value = this.#reviver(String(parent.array.length), value);
+        }
         parent.array.push(value);
       }
     }

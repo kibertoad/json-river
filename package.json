@@ -23,7 +23,7 @@
     "profile": "node bench/memory-profiler/run-profile.ts",
     "profile:server": "node --expose-gc bench/memory-profiler/server.ts",
     "profile:chart": "node bench/memory-profiler/chart.ts",
-    "lint": "oxlint && oxfmt --check src/ test/",
+    "lint": "oxlint && oxfmt --check src/ test/ && tsc --noEmit",
     "lint:fix": "oxfmt src/ test/"
   },
   "repository": {

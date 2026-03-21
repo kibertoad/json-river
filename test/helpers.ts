@@ -4,8 +4,15 @@ import {
   JsonStringifier,
   type JsonStringifierOptions,
 } from "../src/stringifier.ts";
-import { JsonSerializer } from "../src/serializer.ts";
-import { JsonDeserializer, JSON_NULL } from "../src/deserializer.ts";
+import {
+  JsonSerializer,
+  type JsonSerializerOptions,
+} from "../src/serializer.ts";
+import {
+  JsonDeserializer,
+  JSON_NULL,
+  type JsonDeserializerOptions,
+} from "../src/deserializer.ts";
 
 /**
  * Parse a JSON string (or array of string chunks) into tokens.
@@ -35,10 +42,10 @@ export function collectTokens(
  */
 export function parseToValues(
   input: string | string[],
-  options?: JsonParserOptions,
+  options?: JsonParserOptions & JsonDeserializerOptions,
 ): Promise<unknown[]> {
   const parser = new JsonParser(options);
-  const deserializer = new JsonDeserializer();
+  const deserializer = new JsonDeserializer(options);
   const values: unknown[] = [];
 
   return new Promise((resolve, reject) => {
@@ -63,9 +70,9 @@ export function parseToValues(
  */
 export function serializeToString(
   value: unknown,
-  options?: JsonStringifierOptions,
+  options?: JsonStringifierOptions & JsonSerializerOptions,
 ): Promise<string> {
-  const serializer = new JsonSerializer();
+  const serializer = new JsonSerializer(options);
   const stringifier = new JsonStringifier(options);
   let result = "";
 

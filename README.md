@@ -2,7 +2,40 @@
 
 Streaming versions of `JSON.parse()` and `JSON.stringify()` built on Node.js Transform streams.
 
-Designed for memory efficiency and high performance when processing large JSON data, JSONL streams, or building streaming pipelines.
+## Streaming vs. native JSON
+
+json-river is not a general-purpose replacement for `JSON.parse()` / `JSON.stringify()`. It is a specialized tool for scenarios where streaming matters. Here is when it helps — and when it doesn't.
+
+### When json-river helps:
+
+- **Processing many JSON documents from a stream.** JSONL log files, event streams, message queues, SSE payloads — any source that delivers multiple JSON values over time. With `JSON.parse()` you must split on boundaries yourself, handle values that span chunk boundaries, and manage backpressure manually. json-river handles all of this natively with `{ multi: true }`.
+
+- **Building streaming pipelines.** When JSON data arrives from a network socket, file, or subprocess and needs to flow through transformations before being written elsewhere, json-river slots into Node.js `pipeline()` naturally. Backpressure propagates automatically — a slow consumer pauses the producer.
+
+- **Reformatting or validating JSON without materializing JS objects.** The `Parser → Stringifier` pipeline converts between compact and pretty-printed JSON at the token level, without ever constructing JavaScript values. This works with any JSON shape — a single massive object, a deeply nested tree, anything. Since no JS objects are created, memory usage stays proportional to the I/O buffer size, not the document size.
+
+- **Controlling memory usage in long-running services.** Servers that accept JSON uploads or process queued JSON payloads benefit from bounded memory. When processing streams of many small documents (JSONL, arrays of records), each document is deserialized, consumed, and discarded individually — only one document lives in memory at a time.
+
+### When json-river doesn't help:
+
+- **Your JSON is small and already fully buffered in a string.** `JSON.parse()` and `JSON.stringify()` are implemented in C++ inside V8 and are significantly faster than any JavaScript-based streaming parser. For a config file, an API response, or any payload you already have as a string, native JSON is the right choice. See the [size guidelines](#rough-size-guidelines) below for when to start considering streaming.
+
+- **You need the entire parsed object anyway.** If you pipe through the `Deserializer`, it reconstructs the full JS object in memory. For a single large document (one big object or one big array consumed as a whole), the end result is the same as `JSON.parse()` — the full object graph lives in memory. Streaming saves memory only when you can process and discard documents *individually* (JSONL, iterating array items) or when you stay at the token level (`Parser → Stringifier`).
+
+- **You're in a browser or need Web Streams (WHATWG).** json-river is built on Node.js Transform streams. For browser environments, consider [json-stream-es](https://github.com/cdauth/json-stream-es) which uses the WHATWG Streams API.
+
+- **Throughput is the only concern.** On a per-operation basis, `JSON.parse()` / `JSON.stringify()` will always be faster than a streaming parser for data that is already buffered. Streaming wins on *memory*, not *CPU time*.
+
+### Rough size guidelines
+
+These are rules of thumb, not hard cutoffs — actual impact depends on concurrency, available heap, and whether you need the full parsed object:
+
+| Document size | Recommendation |
+|---|---|
+| Under 5 MB | Parsing all at once is usually simplest and totally fine. |
+| 5–10 MB | Still usually fine to parse whole, unless you do this frequently or concurrently. |
+| 10–100 MB | Streaming is often the safer default. |
+| 100 MB+ | Stream unless you specifically need the full structure in memory. |
 
 ## Features
 
@@ -85,6 +118,22 @@ serializer.end()
 await p
 ```
 
+### Reformat JSON without parsing to JS values
+
+```typescript
+import { createReadStream, createWriteStream } from 'node:fs'
+import { pipeline } from 'node:stream/promises'
+import { JsonParser, JsonStringifier } from 'json-river'
+
+// Reformat compact JSON to pretty-printed — no JS objects are ever created
+await pipeline(
+  createReadStream('compact.json'),
+  new JsonParser(),
+  new JsonStringifier({ space: 2 }),
+  createWriteStream('pretty.json')
+)
+```
+
 ### Convenience functions
 
 ```typescript
@@ -118,7 +167,7 @@ json-river processes JSON through a four-stage token pipeline:
 String chunks ──────────> Token stream ──────────────────> String chunks
 
                   Serializer                 Deserializer
-JS values     ──────────> Token stream <──────────────── JS values
+JS values     ──────────> Token stream ──────────────────> JS values
 ```
 
 **Tokens** are the intermediate representation — lightweight discriminated-union objects representing JSON structural elements (object start/end, array start/end, string chunks, numbers, booleans, null, colons, commas).
@@ -127,10 +176,10 @@ Each stage is an independent Node.js Transform stream. Compose them freely:
 
 | Pipeline | Use case |
 |---|---|
-| `Parser → Deserializer` | Parse JSON to JS values |
-| `Serializer → Stringifier` | Stringify JS values to JSON |
-| `Parser → Stringifier` | Token-level round-trip (reformat, validate) |
-| `Serializer → Stringifier → Parser → Deserializer` | Full round-trip |
+| `Parser → Deserializer` | Parse JSON text to JS values |
+| `Serializer → Stringifier` | Stringify JS values to JSON text |
+| `Parser → Stringifier` | Reformat / validate JSON without materializing JS objects |
+| `Parser → custom Transform → Stringifier` | Token-level transformations (filter keys, redact values) |
 
 ## API Reference
 
@@ -160,6 +209,23 @@ The parser handles:
 - `UnexpectedCharError` — invalid character at a given position
 - `PrematureEndError` — input ended mid-value
 
+Errors are emitted as `'error'` events on the parser stream. In a `pipeline()`, they automatically propagate and reject the returned promise:
+
+```typescript
+try {
+  await pipeline(
+    createReadStream('data.json'),
+    new JsonParser(),
+    new JsonDeserializer(),
+    new Writable({ objectMode: true, write(chunk, _enc, cb) { cb() } })
+  )
+} catch (err) {
+  if (err instanceof UnexpectedCharError) {
+    console.error(`Invalid JSON at position ${err.position}: ${err.message}`)
+  }
+}
+```
+
 ### `JsonStringifier`
 
 Transform stream: `Token` → `string`
@@ -183,15 +249,23 @@ Transform stream: JS values → `Token`
 ```typescript
 import { JsonSerializer } from 'json-river'
 
-const serializer = new JsonSerializer()
+const serializer = new JsonSerializer(options?)
 ```
+
+**Options:**
+- `bigint?: "error" | "number"` — How to handle `BigInt` values. Default: `"error"`.
+  - `"error"` — throw a `TypeError`, matching `JSON.stringify` behavior.
+  - `"number"` — convert to `Number` via `Number(value)`. Values beyond `Number.MAX_SAFE_INTEGER` will lose precision silently.
+- `replacer?: ((key: string, value: unknown) => unknown) | (string | number)[]` — Matches `JSON.stringify`'s second argument.
+  - **Function** — called for every value (including the root with key `""`). Return `undefined` to omit a property from objects; in arrays, `undefined` becomes `null`.
+  - **Array** — only these object keys are included. Array elements are unaffected.
 
 Converts JavaScript values into token streams. Follows `JSON.stringify` semantics:
 - `undefined` and functions in object values are skipped
 - `undefined` and functions in arrays become `null`
 - `Infinity`, `NaN` become `null`
 - `toJSON()` is called if present
-- `BigInt` is converted to `Number`
+- `BigInt` throws `TypeError` by default (matching `JSON.stringify`). Use `{ bigint: "number" }` to convert instead.
 
 **Input:** JS values in `writableObjectMode`.
 **Output:** Token objects in `readableObjectMode`.
@@ -203,13 +277,16 @@ Transform stream: `Token` → JS values
 ```typescript
 import { JsonDeserializer, JSON_NULL } from 'json-river'
 
-const deserializer = new JsonDeserializer()
+const deserializer = new JsonDeserializer(options?)
 
 deserializer.on('data', (value) => {
   // value === JSON_NULL means the JSON document was literally `null`
   const actual = value === JSON_NULL ? null : value
 })
 ```
+
+**Options:**
+- `reviver?: (key: string, value: unknown) => unknown` — Matches `JSON.parse`'s second argument. Called for every key/value pair, innermost first (bottom-up). Return the value to keep, or `undefined` to delete the property from its parent object.
 
 Reconstructs JavaScript values from token streams. Emits one value per root-level JSON document.
 
@@ -225,6 +302,8 @@ import { parse } from 'json-river'
 const stream = parse({ multi: true })
 ```
 
+Accepts all `JsonParser` and `JsonDeserializer` options (`multi`, `reviver`).
+
 ### `stringify(options?)`
 
 Convenience: creates a composed `Duplex` stream equivalent to `Serializer → Stringifier`.
@@ -234,6 +313,8 @@ import { stringify } from 'json-river'
 
 const stream = stringify({ space: 2 })
 ```
+
+Accepts all `JsonSerializer` and `JsonStringifier` options (`space`, `replacer`, `bigint`).
 
 ### Token Types
 
@@ -270,6 +351,18 @@ import {
 
 ## Design Decisions
 
+### vs. native `JSON.parse()` / `JSON.stringify()`
+
+Native JSON methods are implemented in V8's C++ layer and will always be faster for data that fits in memory. json-river's advantage is *memory*, not *throughput*:
+
+| Scenario | Native JSON | json-river |
+|---|---|---|
+| Config file / API response | Best choice — fast, simple | Unnecessary overhead |
+| JSONL log file (many small docs) | Must load file, split lines, handle boundaries | Streams doc by doc with backpressure |
+| Single large object, need it all in memory | Same end result — full object in heap | No memory advantage (Deserializer builds the full object) |
+| Single large object, reformatting only | Parse to JS, then re-stringify — 2x memory | Token-level pipeline — no JS objects created |
+| Stream of JSON from network/subprocess | Buffer everything, then parse | Process incrementally as data arrives |
+
 ### vs. json-stream-es
 
 json-river was designed with lessons learned from [json-stream-es](https://github.com/cdauth/json-stream-es):
@@ -283,6 +376,8 @@ json-river was designed with lessons learned from [json-stream-es](https://githu
 | Token allocation | New object per token | Frozen singletons for structural tokens |
 | Number format | Preserves raw format via `rawValue` | Stores parsed `Number` (no `rawValue`) |
 | UTF-8 handling | N/A (Web Streams use strings) | `StringDecoder` for chunk boundary safety |
+
+Choose json-stream-es if you need Web Streams compatibility (browsers, Deno, Cloudflare Workers). Choose json-river if you're on Node.js and want native stream integration.
 
 ### Memory efficiency
 

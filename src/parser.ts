@@ -152,7 +152,7 @@ export class JsonParser extends Transform {
 
   // String state
   #stringValue = "";
-  #stringRole = StringRole.VALUE;
+  #stringRole: StringRole = StringRole.VALUE;
   #unicodeHex = "";
 
   // Number state
