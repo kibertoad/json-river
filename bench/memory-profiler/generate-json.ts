@@ -155,6 +155,41 @@ async function generateLargeStrings(filepath: string, config: GeneratorConfig): 
 }
 
 /**
+ * Generate a JSON file with a named array (typical API response pattern).
+ * Structure: {"metadata": {...}, "data": [items...], "total": N}
+ */
+async function generateNamedArray(filepath: string, config: GeneratorConfig): Promise<void> {
+  const stream = createWriteStream(filepath)
+  const padding = generateRandomString(config.stringValueSize)
+
+  // Opening wrapper + metadata
+  const header = JSON.stringify({
+    metadata: { generated: new Date().toISOString(), version: 1 },
+  }).slice(0, -1) + ',"data":['
+
+  stream.write(header)
+
+  for (let i = 0; i < config.objectCount; i++) {
+    if (i > 0) stream.write(',')
+    const obj: Record<string, unknown> = { id: i }
+    for (let k = 0; k < config.keysPerObject - 1; k++) {
+      obj[`field_${k}`] = k % 3 === 0 ? i * k : k % 3 === 1 ? (k % 2 === 0) : `${padding}_${i}_${k}`
+    }
+    const chunk = JSON.stringify(obj)
+    if (!stream.write(chunk)) {
+      await new Promise<void>(resolve => stream.once('drain', resolve))
+    }
+  }
+
+  stream.write(`],"total":${config.objectCount}}`)
+
+  await new Promise<void>((resolve, reject) => {
+    stream.end(() => resolve())
+    stream.on('error', reject)
+  })
+}
+
+/**
  * Generate a deeply nested JSON structure.
  */
 async function generateDeepNesting(filepath: string, config: GeneratorConfig): Promise<void> {
@@ -198,6 +233,7 @@ async function main() {
     { name: `${preset}-large-object.json`, generator: generateLargeObject, desc: 'Single large object' },
     { name: `${preset}-large-strings.json`, generator: generateLargeStrings, desc: 'Large string values' },
     { name: `${preset}-deep-nesting.json`, generator: generateDeepNesting, desc: 'Deeply nested structure' },
+    { name: `${preset}-named-array.json`, generator: generateNamedArray, desc: 'Named array (API response)' },
   ]
 
   for (const file of files) {

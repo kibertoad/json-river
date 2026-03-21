@@ -30,6 +30,8 @@ import { JsonParser } from '../../src/parser.ts'
 import { JsonStringifier } from '../../src/stringifier.ts'
 import { JsonSerializer } from '../../src/serializer.ts'
 import { JsonDeserializer } from '../../src/deserializer.ts'
+import { JsonArrayItems } from '../../src/array-items.ts'
+import { JsonPick, type PickEvent } from '../../src/pick.ts'
 
 // json-stream-es (Web Streams based)
 // Use dist bundle — json-stream-es src has extensionless imports incompatible with native Node TS
@@ -51,6 +53,7 @@ interface ProfileRequest {
   approach: string
   filePath: string
   multi?: boolean
+  path?: string
   sampleIntervalMs?: number
 }
 
@@ -92,6 +95,9 @@ async function profileNativeJsonParse(filePath: string, multi: boolean, onSample
   const { readFile } = await import('node:fs/promises')
   const content = await readFile(filePath, 'utf-8')
 
+  // Sample after readFile — raw string is in memory
+  onSample(collectMemory())
+
   if (multi) {
     const lines = content.split('\n').filter(l => l.trim())
     for (const line of lines) {
@@ -99,14 +105,18 @@ async function profileNativeJsonParse(filePath: string, multi: boolean, onSample
       onSample(collectMemory())
     }
   } else {
-    JSON.parse(content)
+    // Sample immediately after parse — both the raw string and parsed object
+    // coexist in memory at this point, which is the true peak
+    const parsed = JSON.parse(content)
     onSample(collectMemory())
+    void parsed
   }
 }
 
 async function profileNativeJsonStringify(filePath: string, multi: boolean, onSample: (s: MemorySample) => void): Promise<void> {
   const { readFile } = await import('node:fs/promises')
   const content = await readFile(filePath, 'utf-8')
+  onSample(collectMemory())
 
   if (multi) {
     const lines = content.split('\n').filter(l => l.trim())
@@ -117,8 +127,10 @@ async function profileNativeJsonStringify(filePath: string, multi: boolean, onSa
     }
   } else {
     const obj = JSON.parse(content)
+    onSample(collectMemory())
     JSON.stringify(obj)
     onSample(collectMemory())
+    void obj
   }
 }
 
@@ -128,7 +140,7 @@ async function profileJsonRiverParse(filePath: string, multi: boolean, onSample:
     objectMode: true,
     transform(chunk, _enc, cb) {
       count++
-      if (count % 100 === 0) onSample(collectMemory())
+      if (count <= 1000 || count % 100 === 0) onSample(collectMemory())
       cb()
     },
   })
@@ -152,7 +164,7 @@ async function profileJsonRiverReformat(filePath: string, multi: boolean, onSamp
     new Writable({
       write(_chunk, _enc, cb) {
         count++
-        if (count % 500 === 0) onSample(collectMemory())
+        if (count <= 1000 || count % 500 === 0) onSample(collectMemory())
         cb()
       },
     }),
@@ -170,7 +182,7 @@ async function profileJsonRiverParseStringify(filePath: string, multi: boolean, 
   deserializer.on('data', (value: unknown) => {
     serializer.write(value)
     count++
-    if (count % 100 === 0) onSample(collectMemory())
+    if (count <= 1000 || count % 100 === 0) onSample(collectMemory())
   })
   deserializer.on('end', () => serializer.end())
 
@@ -215,7 +227,7 @@ async function profileJsonStreamEsParse(filePath: string, multi: boolean, onSamp
     const { done } = await reader.read()
     if (done) break
     count++
-    if (count % 100 === 0) onSample(collectMemory())
+    if (count <= 1000 || count % 100 === 0) onSample(collectMemory())
   }
 }
 
@@ -230,16 +242,97 @@ async function profileJsonStreamEsReformat(filePath: string, multi: boolean, onS
     const { done } = await reader.read()
     if (done) break
     count++
-    if (count % 500 === 0) onSample(collectMemory())
+    if (count <= 1000 || count % 500 === 0) onSample(collectMemory())
   }
 }
 
-const APPROACHES: Record<string, (filePath: string, multi: boolean, onSample: (s: MemorySample) => void) => Promise<void>> = {
+async function profileNativeJsonParseIterate(filePath: string, _multi: boolean, onSample: (s: MemorySample) => void, path?: string): Promise<void> {
+  const { readFile } = await import('node:fs/promises')
+  const content = await readFile(filePath, 'utf-8')
+  onSample(collectMemory())
+  const parsed = JSON.parse(content)
+  onSample(collectMemory())
+  const arrayKey = path || 'data'
+  const items = parsed[arrayKey]
+  if (!Array.isArray(items)) {
+    throw new Error(`Value at "${arrayKey}" is not an array`)
+  }
+  for (let i = 0; i < items.length; i++) {
+    void items[i]
+    if (i % 100 === 0) onSample(collectMemory())
+  }
+}
+
+async function profileJsonRiverPick(filePath: string, _multi: boolean, onSample: (s: MemorySample) => void, path?: string): Promise<void> {
+  let count = 0
+  const sampler = new Transform({
+    objectMode: true,
+    transform(chunk, _enc, cb) {
+      count++
+      if (count <= 1000 || count % 100 === 0) onSample(collectMemory())
+      cb()
+    },
+  })
+
+  await pipeline(
+    createReadStream(filePath, { encoding: 'utf-8', highWaterMark: 64 * 1024 }),
+    new JsonParser(),
+    new JsonArrayItems({ path }),
+    new JsonDeserializer(),
+    sampler,
+  )
+}
+
+async function profileJsonRiverPickShellLast(filePath: string, _multi: boolean, onSample: (s: MemorySample) => void, path?: string): Promise<void> {
+  let count = 0
+  const pick = new JsonPick({ pick: [path || 'data'] })
+
+  await pipeline(
+    createReadStream(filePath, { encoding: 'utf-8', highWaterMark: 64 * 1024 }),
+    new JsonParser(),
+    pick,
+    new Writable({
+      objectMode: true,
+      write(_event: PickEvent, _enc, cb) {
+        count++
+        if (count <= 1000 || count % 100 === 0) onSample(collectMemory())
+        cb()
+      },
+    }),
+  )
+}
+
+async function profileJsonRiverPickShellFirst(filePath: string, _multi: boolean, onSample: (s: MemorySample) => void, path?: string): Promise<void> {
+  let count = 0
+  const pick = new JsonPick({ pick: [path || 'data'], shellFirst: true })
+
+  await pipeline(
+    createReadStream(filePath, { encoding: 'utf-8', highWaterMark: 64 * 1024 }),
+    new JsonParser(),
+    pick,
+    new Writable({
+      objectMode: true,
+      write(_event: PickEvent, _enc, cb) {
+        count++
+        if (count <= 1000 || count % 100 === 0) onSample(collectMemory())
+        cb()
+      },
+    }),
+  )
+}
+
+type ApproachFn = (filePath: string, multi: boolean, onSample: (s: MemorySample) => void, path?: string) => Promise<void>
+
+const APPROACHES: Record<string, ApproachFn> = {
   'native-json-parse': profileNativeJsonParse,
   'native-json-stringify': profileNativeJsonStringify,
-  'json-river-parse': profileJsonRiverParse,
+  'native-json-parse-iterate': profileNativeJsonParseIterate,
+  'json-river-parse-inefficient-baseline': profileJsonRiverParse,
   'json-river-reformat': profileJsonRiverReformat,
   'json-river-parse-stringify': profileJsonRiverParseStringify,
+  'json-river-pick-skip-shell': profileJsonRiverPick,
+  'json-river-pick-shell-last': profileJsonRiverPickShellLast,
+  'json-river-pick-shell-first': profileJsonRiverPickShellFirst,
   'json-stream-es-parse': profileJsonStreamEsParse,
   'json-stream-es-reformat': profileJsonStreamEsReformat,
 }
@@ -263,7 +356,7 @@ async function handleProfile(req: IncomingMessage, res: ServerResponse): Promise
     return
   }
 
-  const { approach, filePath, multi = false, sampleIntervalMs = 100 } = request
+  const { approach, filePath, multi = false, path, sampleIntervalMs = 20 } = request
 
   const fn = APPROACHES[approach]
   if (!fn) {
@@ -314,7 +407,7 @@ async function handleProfile(req: IncomingMessage, res: ServerResponse): Promise
   const start = performance.now()
 
   try {
-    await fn(filePath, multi, onSample)
+    await fn(filePath, multi, onSample, path)
   } catch (err: any) {
     timerStopped = true
     res.write(JSON.stringify({ error: err.message }) + '\n')
@@ -322,13 +415,15 @@ async function handleProfile(req: IncomingMessage, res: ServerResponse): Promise
     return
   }
 
+  const elapsed = performance.now() - start
+
   timerStopped = true
   await timerLoop
 
+  // Final sample immediately after work ends (before GC) to capture true end-of-work memory
+  onSample(collectMemory())
   forceGC()
   onSample(collectMemory())
-
-  const elapsed = performance.now() - start
 
   const summary: ProfileSummary = {
     summary: true,

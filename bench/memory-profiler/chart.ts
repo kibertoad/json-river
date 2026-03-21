@@ -48,28 +48,32 @@ interface RunResult {
   summary: Summary
 }
 
-function parseArgs(): { filePath: string; multi: boolean; intervalMs: number; output: string } {
+function parseArgs(): { filePath: string; multi: boolean; path: string | undefined; intervalMs: number; output: string; approaches: string[] | undefined } {
   const args = process.argv.slice(2)
   const filePath = args.find(a => !a.startsWith('--'))
   if (!filePath) {
-    console.error('Usage: node bench/memory-profiler/chart.ts <filePath> [--multi] [--interval=200] [--output=results]')
+    console.error('Usage: node bench/memory-profiler/chart.ts <filePath> [--multi] [--path=data] [--interval=200] [--output=results] [--approaches=a,b,c]')
     process.exit(1)
   }
 
   const multi = args.includes('--multi')
+  const pathArg = args.find(a => a.startsWith('--path='))
+  const path = pathArg ? pathArg.split('=')[1] : undefined
   const intervalArg = args.find(a => a.startsWith('--interval='))
   const intervalMs = intervalArg ? parseInt(intervalArg.split('=')[1], 10) : 200
   const outputArg = args.find(a => a.startsWith('--output='))
   const output = outputArg ? outputArg.split('=')[1] : 'results'
+  const approachesArg = args.find(a => a.startsWith('--approaches='))
+  const approaches = approachesArg ? approachesArg.split('=')[1].split(',') : undefined
 
-  return { filePath: resolve(filePath), multi, intervalMs, output }
+  return { filePath: resolve(filePath), multi, path, intervalMs, output, approaches }
 }
 
-async function runApproach(approach: string, filePath: string, multi: boolean, intervalMs: number): Promise<RunResult> {
+async function runApproach(approach: string, filePath: string, multi: boolean, intervalMs: number, path?: string): Promise<RunResult> {
   const res = await fetch(`${BASE_URL}/profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ approach, filePath, multi, sampleIntervalMs: intervalMs }),
+    body: JSON.stringify({ approach, filePath, multi, path, sampleIntervalMs: intervalMs }),
   })
 
   if (!res.ok) {
@@ -283,7 +287,7 @@ window.addEventListener('resize', draw);
 }
 
 async function main() {
-  const { filePath, multi, intervalMs, output } = parseArgs()
+  const { filePath, multi, path, intervalMs, output, approaches: requestedApproaches } = parseArgs()
 
   // Get available approaches
   let approaches: string[]
@@ -296,16 +300,20 @@ async function main() {
     process.exit(1)
   }
 
+  if (requestedApproaches) {
+    approaches = approaches.filter(a => requestedApproaches.includes(a))
+  }
+
   console.log(`Profiling: ${filePath}`)
   console.log(`Approaches: ${approaches.join(', ')}`)
-  console.log(`Interval: ${intervalMs}ms, Multi: ${multi}\n`)
+  console.log(`Interval: ${intervalMs}ms, Multi: ${multi}${path ? `, Path: ${path}` : ''}\n`)
 
   const results: RunResult[] = []
 
   for (const approach of approaches) {
     process.stdout.write(`  ${approach}...`)
     try {
-      const result = await runApproach(approach, filePath, multi, intervalMs)
+      const result = await runApproach(approach, filePath, multi, intervalMs, path)
       results.push(result)
       console.log(` peak=${result.summary.peakHeapUsedMB}MB delta=${result.summary.deltaHeapUsedMB}MB time=${result.summary.elapsedMs}ms`)
     } catch (err: any) {

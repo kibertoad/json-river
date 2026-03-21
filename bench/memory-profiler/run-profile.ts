@@ -84,11 +84,11 @@ async function startServer(): Promise<ChildProcess> {
   return child
 }
 
-async function runProfile(approach: string, filePath: string, multi: boolean): Promise<ProfileResult> {
+async function runProfile(approach: string, filePath: string, multi: boolean, path?: string): Promise<ProfileResult> {
   const res = await fetch(`${BASE_URL}/profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ approach, filePath, multi, sampleIntervalMs: 200 }),
+    body: JSON.stringify({ approach, filePath, multi, path, sampleIntervalMs: 200 }),
   })
 
   if (!res.ok) {
@@ -187,13 +187,17 @@ async function main() {
   console.log(`Starting memory profiler server...`)
   const server = await startServer()
 
-  const approaches = ['native-json-parse', 'native-json-stringify', 'json-river-parse', 'json-river-parse-stringify', 'json-stream-es-parse']
+  const generalApproaches = ['native-json-parse', 'native-json-stringify', 'json-river-parse-inefficient-baseline', 'json-river-parse-inefficient-baseline-stringify', 'json-stream-es-parse']
+  const namedArrayApproaches = ['native-json-parse', 'json-river-parse-inefficient-baseline', 'json-river-pick-skip-shell', 'json-river-pick-shell-last', 'json-river-pick-shell-first']
   const results: ProfileResult[] = []
 
   try {
     for (const file of files) {
       const filePath = join(testDataDir, file)
       const multi = file.endsWith('.ndjson')
+      const isNamedArray = file.includes('named-array')
+      const approaches = isNamedArray ? namedArrayApproaches : generalApproaches
+      const path = isNamedArray ? 'data' : undefined
 
       for (const approach of approaches) {
         // Skip stringify on non-JSONL files (requires full parse first, too slow for large objects)
@@ -204,7 +208,7 @@ async function main() {
         console.log(`  Profiling: ${approach} + ${file}...`)
 
         try {
-          const result = await runProfile(approach, filePath, multi)
+          const result = await runProfile(approach, filePath, multi, path)
           results.push(result)
 
           // Save raw samples

@@ -13,6 +13,11 @@ import {
   JSON_NULL,
   type JsonDeserializerOptions,
 } from "../src/deserializer.ts";
+import {
+  JsonArrayItems,
+  type JsonArrayItemsOptions,
+} from "../src/array-items.ts";
+import { JsonPick, type JsonPickOptions, type PickEvent } from "../src/pick.ts";
 
 /**
  * Parse a JSON string (or array of string chunks) into tokens.
@@ -87,6 +92,62 @@ export function serializeToString(
 
     serializer.write(value);
     serializer.end();
+  });
+}
+
+/**
+ * Parse JSON string(s) through JsonArrayItems, returning individual array items.
+ */
+export function parseArrayItems(
+  input: string | string[],
+  options?: JsonParserOptions & JsonDeserializerOptions & JsonArrayItemsOptions,
+): Promise<unknown[]> {
+  const parser = new JsonParser(options);
+  const arrayItems = new JsonArrayItems(options);
+  const deserializer = new JsonDeserializer(options);
+  const values: unknown[] = [];
+
+  return new Promise((resolve, reject) => {
+    parser.pipe(arrayItems).pipe(deserializer);
+    deserializer.on("data", (value: unknown) =>
+      values.push(value === JSON_NULL ? null : value),
+    );
+    deserializer.on("end", () => resolve(values));
+    deserializer.on("error", reject);
+    arrayItems.on("error", reject);
+    parser.on("error", reject);
+
+    const chunks = typeof input === "string" ? [input] : input;
+    for (const chunk of chunks) {
+      parser.write(chunk);
+    }
+    parser.end();
+  });
+}
+
+/**
+ * Parse JSON string(s) through JsonPick, returning pick events.
+ */
+export function pickFields(
+  input: string | string[],
+  options: JsonPickOptions,
+): Promise<PickEvent[]> {
+  const parser = new JsonParser();
+  const pick = new JsonPick(options);
+  const events: PickEvent[] = [];
+
+  return new Promise((resolve, reject) => {
+    parser.pipe(pick);
+    pick.on("data", (event: PickEvent) => events.push(event));
+    pick.on("end", () => resolve(events));
+    pick.on("error", reject);
+    parser.on("error", reject);
+
+    const chunks = typeof input === "string" ? [input] : input;
+    for (const chunk of chunks) {
+      parser.write(chunk);
+    }
+    parser.end();
   });
 }
 

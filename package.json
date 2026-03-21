@@ -32,15 +32,19 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.15",
+    "@types/tmp": "^0.2.6",
     "cross-env": "^10.1.0",
     "json-stream-es": "^1.2.1",
-    "tinybench": "^6.0.0",
-    "typescript": "^5.9.3",
     "oxfmt": "^0.12.0",
     "oxlint": "^0.18.0",
+    "tinybench": "^6.0.0",
+    "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   },
   "license": "MIT",
   "author": "Igor Savin",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "tmp": "^0.2.5"
+  }
 }
