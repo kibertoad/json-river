@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  collectTokens,
-  stringifyTokens,
-  parseToValues,
-  serializeToString,
-} from "./helpers.ts";
+import { collectTokens, stringifyTokens, parseToValues, serializeToString } from "./helpers.ts";
 
 describe("round-trip: parse → stringify", () => {
   const testCases: Array<[string, string]> = [
@@ -122,9 +117,7 @@ describe("round-trip: serializer edge cases", () => {
 
   it("throws on BigInt by default", async () => {
     await expect(serializeToString(42n)).rejects.toThrow(TypeError);
-    await expect(serializeToString(42n)).rejects.toThrow(
-      "Do not know how to serialize a BigInt",
-    );
+    await expect(serializeToString(42n)).rejects.toThrow("Do not know how to serialize a BigInt");
   });
 
   it("throws on BigInt in object values by default", async () => {
@@ -141,10 +134,7 @@ describe("round-trip: serializer edge cases", () => {
   });
 
   it("converts BigInt in object values with bigint: 'number'", async () => {
-    const result = await serializeToString(
-      { count: 100n },
-      { bigint: "number" },
-    );
+    const result = await serializeToString({ count: 100n }, { bigint: "number" });
     expect(result).toBe('{"count":100}');
   });
 
@@ -169,27 +159,19 @@ describe("serializer: function replacer", () => {
   });
 
   it("omits properties when returning undefined", async () => {
-    const replacer = (key: string, value: unknown) =>
-      key === "secret" ? undefined : value;
-    const result = await serializeToString(
-      { name: "Alice", secret: "xyz" },
-      { replacer },
-    );
-    expect(result).toBe(
-      JSON.stringify({ name: "Alice", secret: "xyz" }, replacer),
-    );
+    const replacer = (key: string, value: unknown) => (key === "secret" ? undefined : value);
+    const result = await serializeToString({ name: "Alice", secret: "xyz" }, { replacer });
+    expect(result).toBe(JSON.stringify({ name: "Alice", secret: "xyz" }, replacer));
   });
 
   it("converts undefined to null in arrays", async () => {
-    const replacer = (key: string, value: unknown) =>
-      value === 2 ? undefined : value;
+    const replacer = (key: string, value: unknown) => (value === 2 ? undefined : value);
     const result = await serializeToString([1, 2, 3], { replacer });
     expect(result).toBe(JSON.stringify([1, 2, 3], replacer));
   });
 
   it("handles nested objects", async () => {
-    const replacer = (key: string, value: unknown) =>
-      key === "remove" ? undefined : value;
+    const replacer = (key: string, value: unknown) => (key === "remove" ? undefined : value);
     const input = { a: { b: 1, remove: 2 }, c: { remove: 3, d: 4 } };
     const result = await serializeToString(input, { replacer });
     expect(result).toBe(JSON.stringify(input, replacer));
@@ -206,8 +188,7 @@ describe("serializer: function replacer", () => {
   });
 
   it("can replace root value entirely", async () => {
-    const replacer = (key: string, value: unknown) =>
-      key === "" ? { replaced: true } : value;
+    const replacer = (key: string, value: unknown) => (key === "" ? { replaced: true } : value);
     const result = await serializeToString({ original: true }, { replacer });
     expect(result).toBe(JSON.stringify({ original: true }, replacer));
   });
@@ -215,10 +196,7 @@ describe("serializer: function replacer", () => {
 
 describe("serializer: array replacer", () => {
   it("includes only listed keys", async () => {
-    const result = await serializeToString(
-      { a: 1, b: 2, c: 3 },
-      { replacer: ["a", "c"] },
-    );
+    const result = await serializeToString({ a: 1, b: 2, c: 3 }, { replacer: ["a", "c"] });
     expect(result).toBe(JSON.stringify({ a: 1, b: 2, c: 3 }, ["a", "c"]));
   });
 
@@ -238,9 +216,7 @@ describe("serializer: array replacer", () => {
       { "1": "one", "2": "two", "3": "three" },
       { replacer: [1, 3] },
     );
-    expect(result).toBe(
-      JSON.stringify({ "1": "one", "2": "two", "3": "three" }, [1, 3]),
-    );
+    expect(result).toBe(JSON.stringify({ "1": "one", "2": "two", "3": "three" }, [1, 3]));
   });
 });
 
@@ -253,8 +229,7 @@ describe("deserializer: reviver", () => {
   });
 
   it("deletes properties when returning undefined", async () => {
-    const reviver = (key: string, value: unknown) =>
-      key === "remove" ? undefined : value;
+    const reviver = (key: string, value: unknown) => (key === "remove" ? undefined : value);
     const [result] = await parseToValues('{"keep":1,"remove":2}', { reviver });
     expect(result).toEqual(JSON.parse('{"keep":1,"remove":2}', reviver));
   });
@@ -285,8 +260,7 @@ describe("deserializer: reviver", () => {
   });
 
   it("can replace root value entirely", async () => {
-    const reviver = (key: string, value: unknown) =>
-      key === "" ? "replaced" : value;
+    const reviver = (key: string, value: unknown) => (key === "" ? "replaced" : value);
     const [result] = await parseToValues('{"a":1}', { reviver });
     expect(result).toBe("replaced");
   });

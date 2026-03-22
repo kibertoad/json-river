@@ -86,8 +86,7 @@ describe("JsonParser", () => {
     it("parses standard escapes", async () => {
       const tokens = await collectTokens('"\\n\\t\\r\\\\\\"\\/\\b\\f"');
       const chunk = tokens.find(
-        (t): t is Token & { type: TokenType.STRING_CHUNK } =>
-          t.type === TokenType.STRING_CHUNK,
+        (t): t is Token & { type: TokenType.STRING_CHUNK } => t.type === TokenType.STRING_CHUNK,
       );
       expect(chunk!.value).toBe('\n\t\r\\"/\b\f');
     });
@@ -95,8 +94,7 @@ describe("JsonParser", () => {
     it("parses unicode escapes", async () => {
       const tokens = await collectTokens('"\\u0041\\u0042"');
       const chunk = tokens.find(
-        (t): t is Token & { type: TokenType.STRING_CHUNK } =>
-          t.type === TokenType.STRING_CHUNK,
+        (t): t is Token & { type: TokenType.STRING_CHUNK } => t.type === TokenType.STRING_CHUNK,
       );
       expect(chunk!.value).toBe("AB");
     });
@@ -104,8 +102,7 @@ describe("JsonParser", () => {
     it("parses mixed content and escapes", async () => {
       const tokens = await collectTokens('"hello\\nworld"');
       const chunk = tokens.find(
-        (t): t is Token & { type: TokenType.STRING_CHUNK } =>
-          t.type === TokenType.STRING_CHUNK,
+        (t): t is Token & { type: TokenType.STRING_CHUNK } => t.type === TokenType.STRING_CHUNK,
       );
       expect(chunk!.value).toBe("hello\nworld");
     });
@@ -114,18 +111,12 @@ describe("JsonParser", () => {
   describe("containers", () => {
     it("parses empty object", async () => {
       const tokens = await collectTokens("{}");
-      expect(tokens).toEqual([
-        { type: TokenType.OBJECT_START },
-        { type: TokenType.OBJECT_END },
-      ]);
+      expect(tokens).toEqual([{ type: TokenType.OBJECT_START }, { type: TokenType.OBJECT_END }]);
     });
 
     it("parses empty array", async () => {
       const tokens = await collectTokens("[]");
-      expect(tokens).toEqual([
-        { type: TokenType.ARRAY_START },
-        { type: TokenType.ARRAY_END },
-      ]);
+      expect(tokens).toEqual([{ type: TokenType.ARRAY_START }, { type: TokenType.ARRAY_END }]);
     });
 
     it("parses simple object", async () => {
@@ -182,10 +173,7 @@ describe("JsonParser", () => {
 
       // Verify nesting order
       const startIdx = types.indexOf(TokenType.ARRAY_START);
-      const nestedObjStart = types.indexOf(
-        TokenType.OBJECT_START,
-        startIdx + 1,
-      );
+      const nestedObjStart = types.indexOf(TokenType.OBJECT_START, startIdx + 1);
       const trueIdx = types.indexOf(TokenType.TRUE);
       expect(nestedObjStart).toBeLessThan(trueIdx);
     });
@@ -204,10 +192,7 @@ describe("JsonParser", () => {
 
     it("ignores all whitespace types", async () => {
       const tokens = await collectTokens(" \t\n\r{ \t\n\r} \t\n\r");
-      expect(tokens).toEqual([
-        { type: TokenType.OBJECT_START },
-        { type: TokenType.OBJECT_END },
-      ]);
+      expect(tokens).toEqual([{ type: TokenType.OBJECT_START }, { type: TokenType.OBJECT_END }]);
     });
   });
 
@@ -215,8 +200,7 @@ describe("JsonParser", () => {
     it("handles string split across chunks", async () => {
       const tokens = await collectTokens(['"hel', 'lo"']);
       const chunks = tokens.filter(
-        (t): t is Token & { type: TokenType.STRING_CHUNK } =>
-          t.type === TokenType.STRING_CHUNK,
+        (t): t is Token & { type: TokenType.STRING_CHUNK } => t.type === TokenType.STRING_CHUNK,
       );
       const fullValue = chunks.map((c) => c.value).join("");
       expect(fullValue).toBe("hello");
@@ -238,13 +222,9 @@ describe("JsonParser", () => {
       const json = '{"key":"value"}';
       for (let i = 1; i < json.length; i++) {
         const tokens = await collectTokens([json.slice(0, i), json.slice(i)]);
-        const objStarts = tokens.filter(
-          (t) => t.type === TokenType.OBJECT_START,
-        );
+        const objStarts = tokens.filter((t) => t.type === TokenType.OBJECT_START);
         const objEnds = tokens.filter((t) => t.type === TokenType.OBJECT_END);
-        const strStarts = tokens.filter(
-          (t) => t.type === TokenType.STRING_START,
-        );
+        const strStarts = tokens.filter((t) => t.type === TokenType.STRING_START);
         const strEnds = tokens.filter((t) => t.type === TokenType.STRING_END);
         expect(objStarts.length).toBe(1);
         expect(objEnds.length).toBe(1);
@@ -263,8 +243,7 @@ describe("JsonParser", () => {
     it("handles escape sequence split across chunks", async () => {
       const tokens = await collectTokens(['"hello\\', 'nworld"']);
       const chunks = tokens.filter(
-        (t): t is Token & { type: TokenType.STRING_CHUNK } =>
-          t.type === TokenType.STRING_CHUNK,
+        (t): t is Token & { type: TokenType.STRING_CHUNK } => t.type === TokenType.STRING_CHUNK,
       );
       const fullValue = chunks.map((c) => c.value).join("");
       expect(fullValue).toBe("hello\nworld");
@@ -273,8 +252,7 @@ describe("JsonParser", () => {
     it("handles unicode escape split across chunks", async () => {
       const tokens = await collectTokens(['"\\u00', '41"']);
       const chunks = tokens.filter(
-        (t): t is Token & { type: TokenType.STRING_CHUNK } =>
-          t.type === TokenType.STRING_CHUNK,
+        (t): t is Token & { type: TokenType.STRING_CHUNK } => t.type === TokenType.STRING_CHUNK,
       );
       const fullValue = chunks.map((c) => c.value).join("");
       expect(fullValue).toBe("A");
@@ -285,8 +263,7 @@ describe("JsonParser", () => {
     it("parses multiple root values", async () => {
       const tokens = await collectTokens("1\n2\n3", { multi: true });
       const numbers = tokens.filter(
-        (t): t is Token & { type: TokenType.NUMBER } =>
-          t.type === TokenType.NUMBER,
+        (t): t is Token & { type: TokenType.NUMBER } => t.type === TokenType.NUMBER,
       );
       expect(numbers.map((n) => n.value)).toEqual([1, 2, 3]);
     });
@@ -330,9 +307,7 @@ describe("JsonParser", () => {
     });
 
     it("rejects trailing comma in object", async () => {
-      await expect(collectTokens('{"a":1,}')).rejects.toThrow(
-        UnexpectedCharError,
-      );
+      await expect(collectTokens('{"a":1,}')).rejects.toThrow(UnexpectedCharError);
     });
 
     it("rejects trailing comma in array", async () => {
@@ -364,9 +339,7 @@ describe("JsonParser", () => {
     });
 
     it("rejects control characters in strings", async () => {
-      await expect(collectTokens('"\x01"')).rejects.toThrow(
-        UnexpectedCharError,
-      );
+      await expect(collectTokens('"\x01"')).rejects.toThrow(UnexpectedCharError);
     });
 
     it("rejects mismatched brackets", async () => {
@@ -392,8 +365,7 @@ describe("JsonParser", () => {
       const json = JSON.stringify(items);
       const tokens = await collectTokens(json);
       const numbers = tokens.filter(
-        (t): t is Token & { type: TokenType.NUMBER } =>
-          t.type === TokenType.NUMBER,
+        (t): t is Token & { type: TokenType.NUMBER } => t.type === TokenType.NUMBER,
       );
       expect(numbers.length).toBe(10_000);
       expect(numbers[9999].value).toBe(9999);

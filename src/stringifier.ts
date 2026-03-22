@@ -16,9 +16,7 @@ const ESCAPE_TABLE: Record<string, string> = {
 function escapeString(s: string): string {
   return s.replace(
     ESCAPE_REGEX,
-    (ch) =>
-      ESCAPE_TABLE[ch] ??
-      "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0"),
+    (ch) => ESCAPE_TABLE[ch] ?? "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0"),
   );
 }
 
@@ -35,33 +33,21 @@ export class JsonStringifier extends Transform {
   constructor(options?: JsonStringifierOptions) {
     super({ writableObjectMode: true });
     this.#space =
-      typeof options?.space === "number"
-        ? " ".repeat(options.space)
-        : (options?.space ?? "");
+      typeof options?.space === "number" ? " ".repeat(options.space) : (options?.space ?? "");
   }
 
-  override _transform(
-    token: Token,
-    _encoding: BufferEncoding,
-    callback: TransformCallback,
-  ): void {
+  override _transform(token: Token, _encoding: BufferEncoding, callback: TransformCallback): void {
     try {
       const s = this.#space;
       let emptyClose = false;
 
       // Emit pending indent before content tokens (not before close brackets)
       if (s && this.#pendingNewline) {
-        if (
-          token.type === TokenType.OBJECT_END ||
-          token.type === TokenType.ARRAY_END
-        ) {
+        if (token.type === TokenType.OBJECT_END || token.type === TokenType.ARRAY_END) {
           // Empty container — no indent needed
           emptyClose = true;
           this.#pendingNewline = false;
-        } else if (
-          token.type !== TokenType.STRING_CHUNK &&
-          token.type !== TokenType.STRING_END
-        ) {
+        } else if (token.type !== TokenType.STRING_CHUNK && token.type !== TokenType.STRING_END) {
           this.push("\n" + s.repeat(this.#depth));
           this.#pendingNewline = false;
         }

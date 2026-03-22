@@ -9,7 +9,9 @@ import type { PickEvent } from "../src/pick.ts";
  * Shared test suite that runs against both inline and shellFirst modes.
  * In inline mode the shell comes last; in shellFirst mode it comes first.
  */
-function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFirst?: boolean | string }) {
+function sharedPickTests(
+  makeOpts: (pick: string[]) => { pick: string[]; shellFirst?: boolean | string },
+) {
   /**
    * Assert events contain the expected shell and values, regardless of
    * whether shell comes first or last.
@@ -24,17 +26,12 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
     expect(shell!.value).toEqual(expectedShell);
 
     const values = events.filter((e) => e.type === "value");
-    expect(values).toEqual(
-      expectedValues.map((v) => ({ type: "value", ...v })),
-    );
+    expect(values).toEqual(expectedValues.map((v) => ({ type: "value", ...v })));
   }
 
   describe("basic pick", () => {
     it("picks a single array field", async () => {
-      const events = await pickFields(
-        '{"meta":{"page":1},"data":[1,2,3]}',
-        makeOpts(["data"]),
-      );
+      const events = await pickFields('{"meta":{"page":1},"data":[1,2,3]}', makeOpts(["data"]));
       expectShellAndValues(events, { meta: { page: 1 } }, [
         { path: "data", value: 1 },
         { path: "data", value: 2 },
@@ -43,13 +40,8 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
     });
 
     it("picks a scalar field", async () => {
-      const events = await pickFields(
-        '{"a":1,"b":"hello","c":true}',
-        makeOpts(["b"]),
-      );
-      expectShellAndValues(events, { a: 1, c: true }, [
-        { path: "b", value: "hello" },
-      ]);
+      const events = await pickFields('{"a":1,"b":"hello","c":true}', makeOpts(["b"]));
+      expectShellAndValues(events, { a: 1, c: true }, [{ path: "b", value: "hello" }]);
     });
 
     it("picks an object field", async () => {
@@ -64,32 +56,23 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
 
     it("picks a null field", async () => {
       const events = await pickFields('{"a":1,"b":null}', makeOpts(["b"]));
-      expectShellAndValues(events, { a: 1 }, [
-        { path: "b", value: null },
-      ]);
+      expectShellAndValues(events, { a: 1 }, [{ path: "b", value: null }]);
     });
 
     it("picks a boolean field", async () => {
       const events = await pickFields('{"a":1,"b":false}', makeOpts(["b"]));
-      expectShellAndValues(events, { a: 1 }, [
-        { path: "b", value: false },
-      ]);
+      expectShellAndValues(events, { a: 1 }, [{ path: "b", value: false }]);
     });
 
     it("picks a number field", async () => {
       const events = await pickFields('{"a":"x","b":42}', makeOpts(["b"]));
-      expectShellAndValues(events, { a: "x" }, [
-        { path: "b", value: 42 },
-      ]);
+      expectShellAndValues(events, { a: "x" }, [{ path: "b", value: 42 }]);
     });
   });
 
   describe("array item streaming", () => {
     it("streams object array items individually", async () => {
-      const events = await pickFields(
-        '{"items":[{"id":1},{"id":2}]}',
-        makeOpts(["items"]),
-      );
+      const events = await pickFields('{"items":[{"id":1},{"id":2}]}', makeOpts(["items"]));
       expectShellAndValues(events, {}, [
         { path: "items", value: { id: 1 } },
         { path: "items", value: { id: 2 } },
@@ -97,18 +80,12 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
     });
 
     it("handles empty picked array", async () => {
-      const events = await pickFields(
-        '{"data":[],"total":0}',
-        makeOpts(["data"]),
-      );
+      const events = await pickFields('{"data":[],"total":0}', makeOpts(["data"]));
       expectShellAndValues(events, { total: 0 }, []);
     });
 
     it("streams mixed-type array items", async () => {
-      const events = await pickFields(
-        '{"items":[1,"two",true,null,{},[3]]}',
-        makeOpts(["items"]),
-      );
+      const events = await pickFields('{"items":[1,"two",true,null,{},[3]]}', makeOpts(["items"]));
       expectShellAndValues(events, {}, [
         { path: "items", value: 1 },
         { path: "items", value: "two" },
@@ -120,10 +97,7 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
     });
 
     it("streams nested array items correctly", async () => {
-      const events = await pickFields(
-        '{"data":[[1,2],[3,[4,5]]]}',
-        makeOpts(["data"]),
-      );
+      const events = await pickFields('{"data":[[1,2],[3,[4,5]]]}', makeOpts(["data"]));
       expectShellAndValues(events, {}, [
         { path: "data", value: [1, 2] },
         { path: "data", value: [3, [4, 5]] },
@@ -208,10 +182,7 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
 
   describe("ordering resilience", () => {
     it("handles picked field appearing before non-picked fields", async () => {
-      const events = await pickFields(
-        '{"items":[1,2],"meta":{"page":1}}',
-        makeOpts(["items"]),
-      );
+      const events = await pickFields('{"items":[1,2],"meta":{"page":1}}', makeOpts(["items"]));
       expectShellAndValues(events, { meta: { page: 1 } }, [
         { path: "items", value: 1 },
         { path: "items", value: 2 },
@@ -228,13 +199,8 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
     });
 
     it("handles picked field between other fields", async () => {
-      const events = await pickFields(
-        '{"a":1,"data":[10],"b":2}',
-        makeOpts(["data"]),
-      );
-      expectShellAndValues(events, { a: 1, b: 2 }, [
-        { path: "data", value: 10 },
-      ]);
+      const events = await pickFields('{"a":1,"data":[10],"b":2}', makeOpts(["data"]));
+      expectShellAndValues(events, { a: 1, b: 2 }, [{ path: "data", value: 10 }]);
     });
   });
 
@@ -245,13 +211,8 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
     });
 
     it("emits found picks even when some are missing", async () => {
-      const events = await pickFields(
-        '{"a":1,"data":[1]}',
-        makeOpts(["data", "missing"]),
-      );
-      expectShellAndValues(events, { a: 1 }, [
-        { path: "data", value: 1 },
-      ]);
+      const events = await pickFields('{"a":1,"data":[1]}', makeOpts(["data", "missing"]));
+      expectShellAndValues(events, { a: 1 }, [{ path: "data", value: 1 }]);
     });
   });
 
@@ -280,15 +241,15 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
 
   describe("error handling", () => {
     it("errors when root is not an object", async () => {
-      await expect(
-        pickFields("[1,2,3]", makeOpts(["data"])),
-      ).rejects.toThrow(/root value to be an object/);
+      await expect(pickFields("[1,2,3]", makeOpts(["data"]))).rejects.toThrow(
+        /root value to be an object/,
+      );
     });
 
     it("errors when root is a string", async () => {
-      await expect(
-        pickFields('"hello"', makeOpts(["data"])),
-      ).rejects.toThrow(/root value to be an object/);
+      await expect(pickFields('"hello"', makeOpts(["data"]))).rejects.toThrow(
+        /root value to be an object/,
+      );
     });
 
     it("errors when root is a number", async () => {
@@ -298,21 +259,21 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
     });
 
     it("errors when intermediate path is not an object", async () => {
-      await expect(
-        pickFields('{"response":42}', makeOpts(["response.items"])),
-      ).rejects.toThrow(/Expected object.*got number/);
+      await expect(pickFields('{"response":42}', makeOpts(["response.items"]))).rejects.toThrow(
+        /Expected object.*got number/,
+      );
     });
 
     it("errors when intermediate path is an array", async () => {
-      await expect(
-        pickFields('{"response":[1,2]}', makeOpts(["response.items"])),
-      ).rejects.toThrow(/Expected object.*got array/);
+      await expect(pickFields('{"response":[1,2]}', makeOpts(["response.items"]))).rejects.toThrow(
+        /Expected object.*got array/,
+      );
     });
 
     it("errors when intermediate path is a string", async () => {
-      await expect(
-        pickFields('{"response":"text"}', makeOpts(["response.items"])),
-      ).rejects.toThrow(/Expected object.*got string/);
+      await expect(pickFields('{"response":"text"}', makeOpts(["response.items"]))).rejects.toThrow(
+        /Expected object.*got string/,
+      );
     });
   });
 
@@ -354,23 +315,16 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
         },
       });
       const events = await pickFields(json, makeOpts(["response.results"]));
-      expectShellAndValues(
-        events,
-        { response: { facets: { category: ["a", "b"] }, total: 2 } },
-        [
-          { path: "response.results", value: { score: 0.95, doc: { title: "Result 1" } } },
-          { path: "response.results", value: { score: 0.87, doc: { title: "Result 2" } } },
-        ],
-      );
+      expectShellAndValues(events, { response: { facets: { category: ["a", "b"] }, total: 2 } }, [
+        { path: "response.results", value: { score: 0.95, doc: { title: "Result 1" } } },
+        { path: "response.results", value: { score: 0.87, doc: { title: "Result 2" } } },
+      ]);
     });
   });
 
   describe("shell preserves non-picked structure", () => {
     it("preserves arrays in non-picked fields", async () => {
-      const events = await pickFields(
-        '{"tags":["a","b"],"data":[1,2]}',
-        makeOpts(["data"]),
-      );
+      const events = await pickFields('{"tags":["a","b"],"data":[1,2]}', makeOpts(["data"]));
       const shell = events.find((e) => e.type === "shell")!;
       expect(shell.value).toEqual({ tags: ["a", "b"] });
     });
@@ -385,10 +339,7 @@ function sharedPickTests(makeOpts: (pick: string[]) => { pick: string[]; shellFi
     });
 
     it("preserves null values in non-picked fields", async () => {
-      const events = await pickFields(
-        '{"prev":null,"data":[1]}',
-        makeOpts(["data"]),
-      );
+      const events = await pickFields('{"prev":null,"data":[1]}', makeOpts(["data"]));
       const shell = events.find((e) => e.type === "shell")!;
       expect(shell.value).toEqual({ prev: null });
     });
@@ -432,13 +383,13 @@ describe("JsonPick (inline mode)", () => {
   sharedPickTests((pick) => ({ pick }));
 
   it("emits values before shell", async () => {
-    const events = await pickFields(
-      '{"meta":1,"data":[1,2]}',
-      { pick: ["data"] },
-    );
+    const events = await pickFields('{"meta":1,"data":[1,2]}', { pick: ["data"] });
     const shellIdx = events.findIndex((e) => e.type === "shell");
-    const lastValueIdx = events.map((e, i) => e.type === "value" ? i : -1)
-      .filter((i) => i >= 0).pop() ?? -1;
+    const lastValueIdx =
+      events
+        .map((e, i) => (e.type === "value" ? i : -1))
+        .filter((i) => i >= 0)
+        .pop() ?? -1;
     expect(lastValueIdx).toBeLessThan(shellIdx);
   });
 });
@@ -451,19 +402,16 @@ describe("JsonPick (shellFirst: true)", () => {
   sharedPickTests((pick) => ({ pick, shellFirst: true }));
 
   it("emits shell before values", async () => {
-    const events = await pickFields(
-      '{"meta":1,"data":[1,2]}',
-      { pick: ["data"], shellFirst: true },
-    );
+    const events = await pickFields('{"meta":1,"data":[1,2]}', {
+      pick: ["data"],
+      shellFirst: true,
+    });
     expect(events[0].type).toBe("shell");
     expect(events.slice(1).every((e) => e.type === "value")).toBe(true);
   });
 
   it("cleans up temp files after completion", async () => {
-    const events = await pickFields(
-      '{"data":[1,2,3]}',
-      { pick: ["data"], shellFirst: true },
-    );
+    const events = await pickFields('{"data":[1,2,3]}', { pick: ["data"], shellFirst: true });
     // Can't directly inspect temp files (they're cleaned up),
     // but verify correct output as a proxy
     expect(events).toHaveLength(4); // shell + 3 items
@@ -496,10 +444,7 @@ describe("JsonPick (shellFirst: custom dir)", () => {
   it("writes offload files to the specified directory", async () => {
     const dir = makeTmpDir();
     try {
-      await pickFields(
-        '{"data":[1,2],"more":[3]}',
-        { pick: ["data", "more"], shellFirst: dir },
-      );
+      await pickFields('{"data":[1,2],"more":[3]}', { pick: ["data", "more"], shellFirst: dir });
       const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
       expect(files.length).toBe(2);
     } finally {
@@ -510,10 +455,7 @@ describe("JsonPick (shellFirst: custom dir)", () => {
   it("does NOT auto-cleanup files in custom dir", async () => {
     const dir = makeTmpDir();
     try {
-      await pickFields(
-        '{"data":[1]}',
-        { pick: ["data"], shellFirst: dir },
-      );
+      await pickFields('{"data":[1]}', { pick: ["data"], shellFirst: dir });
       const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
       expect(files.length).toBe(1);
 

@@ -1,22 +1,9 @@
 import type { Token } from "../src/tokens.ts";
 import { JsonParser, type JsonParserOptions } from "../src/parser.ts";
-import {
-  JsonStringifier,
-  type JsonStringifierOptions,
-} from "../src/stringifier.ts";
-import {
-  JsonSerializer,
-  type JsonSerializerOptions,
-} from "../src/serializer.ts";
-import {
-  JsonDeserializer,
-  JSON_NULL,
-  type JsonDeserializerOptions,
-} from "../src/deserializer.ts";
-import {
-  JsonArrayItems,
-  type JsonArrayItemsOptions,
-} from "../src/array-items.ts";
+import { JsonStringifier, type JsonStringifierOptions } from "../src/stringifier.ts";
+import { JsonSerializer, type JsonSerializerOptions } from "../src/serializer.ts";
+import { JsonDeserializer, JSON_NULL, type JsonDeserializerOptions } from "../src/deserializer.ts";
+import { JsonArrayItems, type JsonArrayItemsOptions } from "../src/array-items.ts";
 import { JsonPick, type JsonPickOptions, type PickEvent } from "../src/pick.ts";
 
 /**
@@ -55,9 +42,7 @@ export function parseToValues(
 
   return new Promise((resolve, reject) => {
     parser.pipe(deserializer);
-    deserializer.on("data", (value: unknown) =>
-      values.push(value === JSON_NULL ? null : value),
-    );
+    deserializer.on("data", (value: unknown) => values.push(value === JSON_NULL ? null : value));
     deserializer.on("end", () => resolve(values));
     deserializer.on("error", reject);
     parser.on("error", reject);
@@ -109,9 +94,7 @@ export function parseArrayItems(
 
   return new Promise((resolve, reject) => {
     parser.pipe(arrayItems).pipe(deserializer);
-    deserializer.on("data", (value: unknown) =>
-      values.push(value === JSON_NULL ? null : value),
-    );
+    deserializer.on("data", (value: unknown) => values.push(value === JSON_NULL ? null : value));
     deserializer.on("end", () => resolve(values));
     deserializer.on("error", reject);
     arrayItems.on("error", reject);

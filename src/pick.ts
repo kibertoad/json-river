@@ -3,10 +3,7 @@ import * as fs from "node:fs";
 import { tmpNameSync } from "tmp";
 import { type Token, TokenType, StringRole } from "./tokens.ts";
 import { JsonParser } from "./parser.ts";
-import {
-  JsonDeserializer,
-  JSON_NULL,
-} from "./deserializer.ts";
+import { JsonDeserializer, JSON_NULL } from "./deserializer.ts";
 import { JsonArrayItems } from "./array-items.ts";
 
 // Reuse the stringifier's escape logic for re-stringifying tokens to disk
@@ -25,9 +22,7 @@ const ESCAPE_TABLE: Record<string, string> = {
 function escapeString(s: string): string {
   return s.replace(
     ESCAPE_REGEX,
-    (ch) =>
-      ESCAPE_TABLE[ch] ??
-      "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0"),
+    (ch) => ESCAPE_TABLE[ch] ?? "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0"),
   );
 }
 
@@ -205,11 +200,7 @@ export class JsonPick extends Transform {
     }
   }
 
-  override _transform(
-    token: Token,
-    _encoding: BufferEncoding,
-    callback: TransformCallback,
-  ): void {
+  override _transform(token: Token, _encoding: BufferEncoding, callback: TransformCallback): void {
     try {
       if (this.#mode === MODE_PICK) {
         if (this.#shellFirst) {
@@ -246,10 +237,7 @@ export class JsonPick extends Transform {
       .catch((err) => callback(err as Error));
   }
 
-  override _destroy(
-    err: Error | null,
-    callback: (err: Error | null) => void,
-  ): void {
+  override _destroy(err: Error | null, callback: (err: Error | null) => void): void {
     this.#closeCurrentFd();
     if (this.#autoCleanup) {
       this.#cleanupOffloadFiles();
@@ -280,9 +268,7 @@ export class JsonPick extends Transform {
 
       case TokenType.OBJECT_END: {
         const ctx = this.#shellStack.pop()!;
-        this.#shellEmitValue(
-          (ctx as { object: Record<string, unknown> }).object,
-        );
+        this.#shellEmitValue((ctx as { object: Record<string, unknown> }).object);
         const trieNode = this.#trieStack.pop();
         if (trieNode && this.#trieStack.length > 0) {
           this.#pathParts.pop();
@@ -402,10 +388,7 @@ export class JsonPick extends Transform {
         this.#pickStack.push({ type: "object", object: {}, key: "" });
         return;
       }
-      if (
-        token.type === TokenType.STRING_START &&
-        token.role === StringRole.VALUE
-      ) {
+      if (token.type === TokenType.STRING_START && token.role === StringRole.VALUE) {
         this.#pickInRootString = true;
         this.#pickStringAcc = "";
         return;
@@ -430,15 +413,9 @@ export class JsonPick extends Transform {
 
     // Root-level string
     if (this.#pickInRootString) {
-      if (
-        token.type === TokenType.STRING_CHUNK &&
-        token.role === StringRole.VALUE
-      ) {
+      if (token.type === TokenType.STRING_CHUNK && token.role === StringRole.VALUE) {
         this.#pickStringAcc += token.value;
-      } else if (
-        token.type === TokenType.STRING_END &&
-        token.role === StringRole.VALUE
-      ) {
+      } else if (token.type === TokenType.STRING_END && token.role === StringRole.VALUE) {
         this.#pickInRootString = false;
         this.#emitPickValue(this.#pickStringAcc);
         if (!this.#pickIsArray) {
@@ -483,9 +460,7 @@ export class JsonPick extends Transform {
         break;
       case TokenType.OBJECT_END: {
         const ctx = this.#pickStack.pop()!;
-        this.#pickEmitValue(
-          (ctx as { object: Record<string, unknown> }).object,
-        );
+        this.#pickEmitValue((ctx as { object: Record<string, unknown> }).object);
         break;
       }
       case TokenType.ARRAY_START:
@@ -798,9 +773,7 @@ export class JsonPick extends Transform {
 
   #checkNotRoot(actual: string): void {
     if (this.#isFirstToken) {
-      throw new Error(
-        `JsonPick requires root value to be an object, got ${actual}`,
-      );
+      throw new Error(`JsonPick requires root value to be an object, got ${actual}`);
     }
   }
 

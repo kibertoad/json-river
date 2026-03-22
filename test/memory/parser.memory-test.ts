@@ -58,12 +58,7 @@ describe("parser memory", () => {
       },
     });
 
-    const pipelinePromise = pipeline(
-      source,
-      parser,
-      deserializer,
-      slowConsumer,
-    ).catch(() => {});
+    const pipelinePromise = pipeline(source, parser, deserializer, slowConsumer).catch(() => {});
 
     // Warm-up: let the pipeline enter steady-state backpressure
     forceGC();

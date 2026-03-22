@@ -30,9 +30,7 @@ describe("JsonDeserializer", () => {
     });
 
     it("deserializes simple object", async () => {
-      expect(await parseToValues('{"a":1,"b":"two"}')).toEqual([
-        { a: 1, b: "two" },
-      ]);
+      expect(await parseToValues('{"a":1,"b":"two"}')).toEqual([{ a: 1, b: "two" }]);
     });
 
     it("deserializes nested object", async () => {

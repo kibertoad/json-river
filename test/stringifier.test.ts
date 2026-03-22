@@ -57,9 +57,7 @@ describe("JsonStringifier", () => {
       expect(await stringifyTokens([TRUE])).toBe("true");
       expect(await stringifyTokens([FALSE])).toBe("false");
       expect(await stringifyTokens([NULL])).toBe("null");
-      expect(
-        await stringifyTokens([{ type: TokenType.NUMBER, value: 42 }]),
-      ).toBe("42");
+      expect(await stringifyTokens([{ type: TokenType.NUMBER, value: 42 }])).toBe("42");
     });
 
     it("stringifies string with escapes", async () => {
@@ -124,20 +122,12 @@ describe("JsonStringifier", () => {
     });
 
     it("formats empty containers compactly", async () => {
-      expect(
-        await stringifyTokens([OBJECT_START, OBJECT_END], { space: 2 }),
-      ).toBe("{}");
-      expect(
-        await stringifyTokens([ARRAY_START, ARRAY_END], { space: 2 }),
-      ).toBe("[]");
+      expect(await stringifyTokens([OBJECT_START, OBJECT_END], { space: 2 })).toBe("{}");
+      expect(await stringifyTokens([ARRAY_START, ARRAY_END], { space: 2 })).toBe("[]");
     });
 
     it("formats with string space", async () => {
-      const tokens: Token[] = [
-        ARRAY_START,
-        { type: TokenType.NUMBER, value: 1 },
-        ARRAY_END,
-      ];
+      const tokens: Token[] = [ARRAY_START, { type: TokenType.NUMBER, value: 1 }, ARRAY_END];
       const result = await stringifyTokens(tokens, { space: "\t" });
       expect(result).toBe("[\n\t1\n]");
     });

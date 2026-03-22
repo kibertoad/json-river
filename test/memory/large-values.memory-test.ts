@@ -63,10 +63,9 @@ describe("large values memory", () => {
     source.destroy();
     await pipelinePromise;
 
-    expect(
-      result.passed,
-      formatHeapResult(result, `large strings, consumed ${consumed}`),
-    ).toBe(true);
+    expect(result.passed, formatHeapResult(result, `large strings, consumed ${consumed}`)).toBe(
+      true,
+    );
   });
 
   it("deep nesting: parser stack does not leak across documents", async () => {
@@ -117,10 +116,9 @@ describe("large values memory", () => {
     source.destroy();
     await pipelinePromise;
 
-    expect(
-      result.passed,
-      formatHeapResult(result, `deep nesting, consumed ${consumed}`),
-    ).toBe(true);
+    expect(result.passed, formatHeapResult(result, `deep nesting, consumed ${consumed}`)).toBe(
+      true,
+    );
   });
 
   it("many small documents: no per-document overhead accumulates", async () => {
@@ -169,10 +167,9 @@ describe("large values memory", () => {
     source.destroy();
     await pipelinePromise;
 
-    expect(
-      result.passed,
-      formatHeapResult(result, `many small docs, consumed ${consumed}`),
-    ).toBe(true);
+    expect(result.passed, formatHeapResult(result, `many small docs, consumed ${consumed}`)).toBe(
+      true,
+    );
   });
 
   it("wide objects: many keys per object do not leak across documents", async () => {
@@ -229,9 +226,8 @@ describe("large values memory", () => {
     source.destroy();
     await pipelinePromise;
 
-    expect(
-      result.passed,
-      formatHeapResult(result, `wide objects, consumed ${consumed}`),
-    ).toBe(true);
+    expect(result.passed, formatHeapResult(result, `wide objects, consumed ${consumed}`)).toBe(
+      true,
+    );
   });
 });

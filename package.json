@@ -38,15 +38,17 @@
     "cross-env": "^10.1.0",
     "json-stream-es": "^1.2.1",
     "memory-watchmen": "^1.0.0",
-    "oxfmt": "^0.12.0",
-    "oxlint": "^0.18.0",
+    "oxfmt": "^0.41.0",
+    "oxlint": "^1.56.0",
     "tinybench": "^6.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   },
   "license": "MIT",
   "author": "Igor Savin",
-  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "tmp": "^0.2.5"
   }

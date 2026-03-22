@@ -69,11 +69,7 @@ export class JsonArrayItems extends Transform {
     return this.#matched < this.#segments.length ? "object" : "array";
   }
 
-  override _transform(
-    token: Token,
-    _encoding: BufferEncoding,
-    callback: TransformCallback,
-  ): void {
+  override _transform(token: Token, _encoding: BufferEncoding, callback: TransformCallback): void {
     try {
       switch (this.#phase) {
         case PHASE_SEEK:
@@ -104,10 +100,7 @@ export class JsonArrayItems extends Transform {
   #handleSeek(token: Token): void {
     switch (token.type) {
       case TokenType.ARRAY_START:
-        if (
-          this.#matched === this.#segments.length &&
-          this.#depth === this.#matched
-        ) {
+        if (this.#matched === this.#segments.length && this.#depth === this.#matched) {
           // Found target array
           this.#phase = PHASE_STREAM;
           return;
@@ -116,18 +109,12 @@ export class JsonArrayItems extends Transform {
         break;
 
       case TokenType.OBJECT_START:
-        if (
-          this.#matched < this.#segments.length &&
-          this.#depth === this.#matched
-        ) {
+        if (this.#matched < this.#segments.length && this.#depth === this.#matched) {
           // Entering the next object on the path
           this.#depth++;
           return;
         }
-        if (
-          this.#matched === this.#segments.length &&
-          this.#depth === this.#matched
-        ) {
+        if (this.#matched === this.#segments.length && this.#depth === this.#matched) {
           this.#throwUnexpectedType("object");
         }
         this.#depth++;
@@ -137,10 +124,7 @@ export class JsonArrayItems extends Transform {
         if (token.role === StringRole.KEY && this.#depth === this.#matched + 1) {
           this.#keyBuf = "";
           this.#readingKey = true;
-        } else if (
-          token.role === StringRole.VALUE &&
-          this.#depth === this.#matched
-        ) {
+        } else if (token.role === StringRole.VALUE && this.#depth === this.#matched) {
           this.#throwUnexpectedType("string");
         }
         break;

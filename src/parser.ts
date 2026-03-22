@@ -82,12 +82,7 @@ const NUM_E = 5;
 const NUM_E_SIGN = 6;
 const NUM_EXP_DIGITS = 7;
 
-const VALID_NUMBER_END = new Set([
-  NUM_ZERO,
-  NUM_DIGITS,
-  NUM_FRAC_DIGITS,
-  NUM_EXP_DIGITS,
-]);
+const VALID_NUMBER_END = new Set([NUM_ZERO, NUM_DIGITS, NUM_FRAC_DIGITS, NUM_EXP_DIGITS]);
 
 const ESCAPE_MAP: Record<number, string> = {
   [CH_QUOTE]: '"',
@@ -101,12 +96,7 @@ const ESCAPE_MAP: Record<number, string> = {
 };
 
 function isWhitespace(code: number): boolean {
-  return (
-    code === CH_SPACE ||
-    code === CH_TAB ||
-    code === CH_NEWLINE ||
-    code === CH_CR
-  );
+  return code === CH_SPACE || code === CH_TAB || code === CH_NEWLINE || code === CH_CR;
 }
 
 function isDigit(code: number): boolean {
@@ -305,11 +295,7 @@ export class JsonParser extends Transform {
     if (this.#mode === MODE_STRING) {
       if (code === CH_QUOTE) {
         this.#flushStringChunk();
-        this.push(
-          this.#stringRole === StringRole.KEY
-            ? STRING_END_KEY
-            : STRING_END_VALUE,
-        );
+        this.push(this.#stringRole === StringRole.KEY ? STRING_END_KEY : STRING_END_VALUE);
         this.#mode = MODE_NONE;
         if (this.#stringRole === StringRole.KEY) {
           this.#expect = EXPECT_COLON;
@@ -350,9 +336,7 @@ export class JsonParser extends Transform {
       }
       this.#unicodeHex += char;
       if (this.#unicodeHex.length === 4) {
-        this.#stringValue += String.fromCharCode(
-          parseInt(this.#unicodeHex, 16),
-        );
+        this.#stringValue += String.fromCharCode(parseInt(this.#unicodeHex, 16));
         this.#mode = MODE_STRING;
       }
       return;
@@ -399,8 +383,7 @@ export class JsonParser extends Transform {
     // Object end
     if (
       code === CH_RCURLY &&
-      (this.#expect === EXPECT_KEY_OR_OBJECT_END ||
-        this.#expect === EXPECT_COMMA_OR_OBJECT_END)
+      (this.#expect === EXPECT_KEY_OR_OBJECT_END || this.#expect === EXPECT_COMMA_OR_OBJECT_END)
     ) {
       this.push(OBJECT_END);
       this.#stack.pop();
@@ -419,8 +402,7 @@ export class JsonParser extends Transform {
     // Array end
     if (
       code === CH_RBRACKET &&
-      (this.#expect === EXPECT_VALUE_OR_ARRAY_END ||
-        this.#expect === EXPECT_COMMA_OR_ARRAY_END)
+      (this.#expect === EXPECT_VALUE_OR_ARRAY_END || this.#expect === EXPECT_COMMA_OR_ARRAY_END)
     ) {
       this.push(ARRAY_END);
       this.#stack.pop();
@@ -458,10 +440,7 @@ export class JsonParser extends Transform {
         this.push(STRING_START_VALUE);
         return;
       }
-      if (
-        this.#expect === EXPECT_KEY_OR_OBJECT_END ||
-        this.#expect === EXPECT_KEY
-      ) {
+      if (this.#expect === EXPECT_KEY_OR_OBJECT_END || this.#expect === EXPECT_KEY) {
         this.#stringRole = StringRole.KEY;
         this.#stringValue = "";
         this.#mode = MODE_STRING;
@@ -514,8 +493,7 @@ export class JsonParser extends Transform {
     callback: TransformCallback,
   ): void {
     try {
-      const str =
-        typeof chunk === "string" ? chunk : this.#decoder.write(chunk);
+      const str = typeof chunk === "string" ? chunk : this.#decoder.write(chunk);
       for (let i = 0; i < str.length; i++) {
         this.#processChar(str.charCodeAt(i), str[i]);
         this.#position++;
@@ -561,10 +539,7 @@ export class JsonParser extends Transform {
       }
 
       // Must have completed at least one root value (unless multi mode with no input)
-      if (
-        this.#expect !== EXPECT_END &&
-        !(this.#multi && this.#expect === EXPECT_VALUE)
-      ) {
+      if (this.#expect !== EXPECT_END && !(this.#multi && this.#expect === EXPECT_VALUE)) {
         throw new PrematureEndError();
       }
 

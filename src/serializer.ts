@@ -70,11 +70,7 @@ export class JsonSerializer extends Transform {
     callback?: (error?: Error | null) => void,
   ): boolean {
     if (chunk === null) chunk = NULL_SENTINEL;
-    return super.write(
-      chunk as any,
-      encodingOrCallback as any,
-      callback as any,
-    );
+    return super.write(chunk as any, encodingOrCallback as any, callback as any);
   }
 
   /**
@@ -193,10 +189,7 @@ export class JsonSerializer extends Transform {
     callback: TransformCallback,
   ): void {
     try {
-      const resolved = this.#resolve(
-        value === NULL_SENTINEL ? null : value,
-        "",
-      );
+      const resolved = this.#resolve(value === NULL_SENTINEL ? null : value, "");
       this.#emit(resolved);
       callback();
     } catch (err) {

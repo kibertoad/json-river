@@ -8,17 +8,11 @@ describe("JsonArrayItems", () => {
     });
 
     it("streams items from object array", async () => {
-      expect(await parseArrayItems('[{"a":1},{"b":2}]')).toEqual([
-        { a: 1 },
-        { b: 2 },
-      ]);
+      expect(await parseArrayItems('[{"a":1},{"b":2}]')).toEqual([{ a: 1 }, { b: 2 }]);
     });
 
     it("streams items from string array", async () => {
-      expect(await parseArrayItems('["hello","world"]')).toEqual([
-        "hello",
-        "world",
-      ]);
+      expect(await parseArrayItems('["hello","world"]')).toEqual(["hello", "world"]);
     });
 
     it("streams items with mixed types", async () => {
@@ -41,75 +35,59 @@ describe("JsonArrayItems", () => {
     });
 
     it("handles nested objects in items", async () => {
-      expect(
-        await parseArrayItems('[{"a":{"b":[1,2]}},{"c":3}]'),
-      ).toEqual([{ a: { b: [1, 2] } }, { c: 3 }]);
+      expect(await parseArrayItems('[{"a":{"b":[1,2]}},{"c":3}]')).toEqual([
+        { a: { b: [1, 2] } },
+        { c: 3 },
+      ]);
     });
 
     it("handles nested arrays in items", async () => {
-      expect(await parseArrayItems("[[1,[2,3]],[4]]")).toEqual([
-        [1, [2, 3]],
-        [4],
-      ]);
+      expect(await parseArrayItems("[[1,[2,3]],[4]]")).toEqual([[1, [2, 3]], [4]]);
     });
   });
 
   describe("named array (path option)", () => {
     it("streams items from simple path", async () => {
-      expect(
-        await parseArrayItems('{"data":[1,2,3]}', { path: "data" }),
-      ).toEqual([1, 2, 3]);
+      expect(await parseArrayItems('{"data":[1,2,3]}', { path: "data" })).toEqual([1, 2, 3]);
     });
 
     it("streams items from object array at path", async () => {
-      expect(
-        await parseArrayItems('{"data":[{"a":1},{"b":2}]}', { path: "data" }),
-      ).toEqual([{ a: 1 }, { b: 2 }]);
+      expect(await parseArrayItems('{"data":[{"a":1},{"b":2}]}', { path: "data" })).toEqual([
+        { a: 1 },
+        { b: 2 },
+      ]);
     });
 
     it("handles empty array at path", async () => {
-      expect(
-        await parseArrayItems('{"data":[]}', { path: "data" }),
-      ).toEqual([]);
+      expect(await parseArrayItems('{"data":[]}', { path: "data" })).toEqual([]);
     });
 
     it("ignores other keys before target", async () => {
-      expect(
-        await parseArrayItems('{"other":1,"data":[1,2]}', { path: "data" }),
-      ).toEqual([1, 2]);
+      expect(await parseArrayItems('{"other":1,"data":[1,2]}', { path: "data" })).toEqual([1, 2]);
     });
 
     it("ignores other keys after target", async () => {
-      expect(
-        await parseArrayItems('{"data":[1,2],"total":2}', { path: "data" }),
-      ).toEqual([1, 2]);
+      expect(await parseArrayItems('{"data":[1,2],"total":2}', { path: "data" })).toEqual([1, 2]);
     });
 
     it("skips complex values for non-matching keys", async () => {
       expect(
-        await parseArrayItems(
-          '{"meta":{"nested":{"deep":true},"list":[1,2]},"data":[3,4]}',
-          { path: "data" },
-        ),
+        await parseArrayItems('{"meta":{"nested":{"deep":true},"list":[1,2]},"data":[3,4]}', {
+          path: "data",
+        }),
       ).toEqual([3, 4]);
     });
 
     it("skips string values for non-matching keys", async () => {
-      expect(
-        await parseArrayItems('{"name":"test","data":[1]}', { path: "data" }),
-      ).toEqual([1]);
+      expect(await parseArrayItems('{"name":"test","data":[1]}', { path: "data" })).toEqual([1]);
     });
 
     it("skips boolean values for non-matching keys", async () => {
-      expect(
-        await parseArrayItems('{"active":true,"data":[1]}', { path: "data" }),
-      ).toEqual([1]);
+      expect(await parseArrayItems('{"active":true,"data":[1]}', { path: "data" })).toEqual([1]);
     });
 
     it("skips null values for non-matching keys", async () => {
-      expect(
-        await parseArrayItems('{"prev":null,"data":[1]}', { path: "data" }),
-      ).toEqual([1]);
+      expect(await parseArrayItems('{"prev":null,"data":[1]}', { path: "data" })).toEqual([1]);
     });
 
     it("skips array values for non-matching keys", async () => {
@@ -140,19 +118,17 @@ describe("JsonArrayItems", () => {
 
     it("skips non-matching keys at each level", async () => {
       expect(
-        await parseArrayItems(
-          '{"results":{"count":5,"items":[1,2],"extra":true}}',
-          { path: "results.items" },
-        ),
+        await parseArrayItems('{"results":{"count":5,"items":[1,2],"extra":true}}', {
+          path: "results.items",
+        }),
       ).toEqual([1, 2]);
     });
 
     it("skips complex sibling values at nested level", async () => {
       expect(
-        await parseArrayItems(
-          '{"results":{"other":{"nested":true},"items":[1]}}',
-          { path: "results.items" },
-        ),
+        await parseArrayItems('{"results":{"other":{"nested":true},"items":[1]}}', {
+          path: "results.items",
+        }),
       ).toEqual([1]);
     });
   });
@@ -171,9 +147,7 @@ describe("JsonArrayItems", () => {
     });
 
     it("handles object items split across chunks", async () => {
-      expect(
-        await parseArrayItems(['[{"a":', "1},{", '"b":2}]']),
-      ).toEqual([{ a: 1 }, { b: 2 }]);
+      expect(await parseArrayItems(['[{"a":', "1},{", '"b":2}]'])).toEqual([{ a: 1 }, { b: 2 }]);
     });
   });
 
@@ -181,83 +155,69 @@ describe("JsonArrayItems", () => {
     it("applies reviver to array items", async () => {
       const reviver = (_key: string, value: unknown) =>
         typeof value === "number" ? value * 2 : value;
-      expect(
-        await parseArrayItems('[{"n":1},{"n":2}]', { reviver }),
-      ).toEqual([{ n: 2 }, { n: 4 }]);
+      expect(await parseArrayItems('[{"n":1},{"n":2}]', { reviver })).toEqual([{ n: 2 }, { n: 4 }]);
     });
   });
 
   describe("error handling", () => {
     it("errors when root is object but expected array (no path)", async () => {
-      await expect(parseArrayItems('{"a":1}')).rejects.toThrow(
-        /Expected array.*got object/,
-      );
+      await expect(parseArrayItems('{"a":1}')).rejects.toThrow(/Expected array.*got object/);
     });
 
     it("errors when root is number (no path)", async () => {
-      await expect(parseArrayItems("42")).rejects.toThrow(
+      await expect(parseArrayItems("42")).rejects.toThrow(/Expected array.*got number/);
+    });
+
+    it("errors when root is string (no path)", async () => {
+      await expect(parseArrayItems('"hello"')).rejects.toThrow(/Expected array.*got string/);
+    });
+
+    it("errors when root is boolean (no path)", async () => {
+      await expect(parseArrayItems("true")).rejects.toThrow(/Expected array.*got boolean/);
+    });
+
+    it("errors when root is null (no path)", async () => {
+      await expect(parseArrayItems("null")).rejects.toThrow(/Expected array.*got null/);
+    });
+
+    it("errors when root is array but expected object (with path)", async () => {
+      await expect(parseArrayItems("[1,2,3]", { path: "data" })).rejects.toThrow(
+        /Expected object.*got array/,
+      );
+    });
+
+    it("errors when key not found", async () => {
+      await expect(parseArrayItems('{"other":1}', { path: "data" })).rejects.toThrow(
+        /Key "data" not found/,
+      );
+    });
+
+    it("errors when key not found in empty object", async () => {
+      await expect(parseArrayItems("{}", { path: "data" })).rejects.toThrow(/Key "data" not found/);
+    });
+
+    it("errors when value at path is not array", async () => {
+      await expect(parseArrayItems('{"data":42}', { path: "data" })).rejects.toThrow(
         /Expected array.*got number/,
       );
     });
 
-    it("errors when root is string (no path)", async () => {
-      await expect(parseArrayItems('"hello"')).rejects.toThrow(
-        /Expected array.*got string/,
-      );
-    });
-
-    it("errors when root is boolean (no path)", async () => {
-      await expect(parseArrayItems("true")).rejects.toThrow(
-        /Expected array.*got boolean/,
-      );
-    });
-
-    it("errors when root is null (no path)", async () => {
-      await expect(parseArrayItems("null")).rejects.toThrow(
-        /Expected array.*got null/,
-      );
-    });
-
-    it("errors when root is array but expected object (with path)", async () => {
-      await expect(
-        parseArrayItems("[1,2,3]", { path: "data" }),
-      ).rejects.toThrow(/Expected object.*got array/);
-    });
-
-    it("errors when key not found", async () => {
-      await expect(
-        parseArrayItems('{"other":1}', { path: "data" }),
-      ).rejects.toThrow(/Key "data" not found/);
-    });
-
-    it("errors when key not found in empty object", async () => {
-      await expect(
-        parseArrayItems("{}", { path: "data" }),
-      ).rejects.toThrow(/Key "data" not found/);
-    });
-
-    it("errors when value at path is not array", async () => {
-      await expect(
-        parseArrayItems('{"data":42}', { path: "data" }),
-      ).rejects.toThrow(/Expected array.*got number/);
-    });
-
     it("errors when value at path is object instead of array", async () => {
-      await expect(
-        parseArrayItems('{"data":{"nested":true}}', { path: "data" }),
-      ).rejects.toThrow(/Expected array.*got object/);
+      await expect(parseArrayItems('{"data":{"nested":true}}', { path: "data" })).rejects.toThrow(
+        /Expected array.*got object/,
+      );
     });
 
     it("errors when nested key not found", async () => {
-      await expect(
-        parseArrayItems('{"results":{}}', { path: "results.items" }),
-      ).rejects.toThrow(/Key "items" not found/);
+      await expect(parseArrayItems('{"results":{}}', { path: "results.items" })).rejects.toThrow(
+        /Key "items" not found/,
+      );
     });
 
     it("errors when intermediate path value is not object", async () => {
-      await expect(
-        parseArrayItems('{"results":42}', { path: "results.items" }),
-      ).rejects.toThrow(/Expected object.*got number/);
+      await expect(parseArrayItems('{"results":42}', { path: "results.items" })).rejects.toThrow(
+        /Expected object.*got number/,
+      );
     });
   });
 

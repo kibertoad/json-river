@@ -26,29 +26,16 @@ export {
 } from "./parser.ts";
 export { JsonStringifier, type JsonStringifierOptions } from "./stringifier.ts";
 export { JsonSerializer, type JsonSerializerOptions } from "./serializer.ts";
-export {
-  JsonDeserializer,
-  JSON_NULL,
-  type JsonDeserializerOptions,
-} from "./deserializer.ts";
-export {
-  JsonArrayItems,
-  type JsonArrayItemsOptions,
-} from "./array-items.ts";
+export { JsonDeserializer, JSON_NULL, type JsonDeserializerOptions } from "./deserializer.ts";
+export { JsonArrayItems, type JsonArrayItemsOptions } from "./array-items.ts";
 export { JsonPick, type JsonPickOptions, type PickEvent } from "./pick.ts";
 
 import { JSON_NULL } from "./deserializer.ts";
 import { JsonParser, type JsonParserOptions } from "./parser.ts";
 import { JsonStringifier, type JsonStringifierOptions } from "./stringifier.ts";
 import { JsonSerializer, type JsonSerializerOptions } from "./serializer.ts";
-import {
-  JsonDeserializer,
-  type JsonDeserializerOptions,
-} from "./deserializer.ts";
-import {
-  JsonArrayItems,
-  type JsonArrayItemsOptions,
-} from "./array-items.ts";
+import { JsonDeserializer, type JsonDeserializerOptions } from "./deserializer.ts";
+import { JsonArrayItems, type JsonArrayItemsOptions } from "./array-items.ts";
 import { JsonPick, type JsonPickOptions } from "./pick.ts";
 
 /**
@@ -59,17 +46,13 @@ import { JsonPick, type JsonPickOptions } from "./pick.ts";
  * because Node.js objectMode streams interpret `push(null)` as end-of-stream.
  * Check with `value === JSON_NULL ? null : value`.
  */
-export interface ParseOptions
-  extends JsonParserOptions,
-    JsonDeserializerOptions {}
+export interface ParseOptions extends JsonParserOptions, JsonDeserializerOptions {}
 
 export function parse(options?: ParseOptions): Duplex {
   return compose(new JsonParser(options), new JsonDeserializer(options));
 }
 
-export interface StringifyOptions
-  extends JsonStringifierOptions,
-    JsonSerializerOptions {}
+export interface StringifyOptions extends JsonStringifierOptions, JsonSerializerOptions {}
 
 /**
  * Creates a composed Transform: JS value input → string output.
@@ -101,16 +84,10 @@ export function stringify(options?: StringifyOptions): Duplex {
  * because Node.js objectMode streams interpret `push(null)` as end-of-stream.
  * Check with `value === JSON_NULL ? null : value`.
  */
-export interface ParseArrayOptions
-  extends JsonDeserializerOptions,
-    JsonArrayItemsOptions {}
+export interface ParseArrayOptions extends JsonDeserializerOptions, JsonArrayItemsOptions {}
 
 export function parseArray(options?: ParseArrayOptions): Duplex {
-  return compose(
-    new JsonParser(),
-    new JsonArrayItems(options),
-    new JsonDeserializer(options),
-  );
+  return compose(new JsonParser(), new JsonArrayItems(options), new JsonDeserializer(options));
 }
 
 /**

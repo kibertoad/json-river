@@ -61,11 +61,7 @@ export class JsonDeserializer extends Transform {
     }
   }
 
-  override _transform(
-    token: Token,
-    _encoding: BufferEncoding,
-    callback: TransformCallback,
-  ): void {
+  override _transform(token: Token, _encoding: BufferEncoding, callback: TransformCallback): void {
     try {
       switch (token.type) {
         case TokenType.OBJECT_START:

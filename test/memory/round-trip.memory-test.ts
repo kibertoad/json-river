@@ -11,12 +11,7 @@
  *  - Backpressure propagation failures across the 4-stage pipeline
  */
 import { describe, it, expect } from "vitest";
-import {
-  Readable,
-  Writable,
-  Transform,
-  type TransformCallback,
-} from "node:stream";
+import { Readable, Writable, Transform, type TransformCallback } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 import { JsonParser } from "../../src/parser.ts";
