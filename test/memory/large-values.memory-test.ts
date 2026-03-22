@@ -11,7 +11,7 @@ import { pipeline } from "node:stream/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 import { JsonParser } from "../../src/parser.ts";
 import { JsonDeserializer } from "../../src/deserializer.ts";
-import { forceGC, monitorHeap, formatHeapResult } from "./helpers.ts";
+import { forceGC, monitorHeap, formatHeapResult } from "memory-watchmen";
 
 describe("large values memory", () => {
   it("large strings: parser flushes chunks and does not retain full string", async () => {

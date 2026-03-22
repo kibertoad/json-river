@@ -1,6 +1,6 @@
 {
   "name": "json-river",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Streaming versions of JSON.parse() and JSON.stringify()",
   "type": "module",
   "engines": {
@@ -23,6 +23,7 @@
     "profile": "node bench/memory-profiler/run-profile.ts",
     "profile:server": "node --expose-gc bench/memory-profiler/server.ts",
     "profile:chart": "node bench/memory-profiler/chart.ts",
+    "profile:compare": "node --expose-gc bench/memory-profiler/compare-picks.ts",
     "lint": "oxlint && oxfmt --check src/ test/ && tsc --noEmit",
     "lint:fix": "oxfmt src/ test/"
   },
@@ -35,6 +36,7 @@
     "@types/tmp": "^0.2.6",
     "cross-env": "^10.1.0",
     "json-stream-es": "^1.2.1",
+    "memory-watchmen": "^1.0.0",
     "oxfmt": "^0.12.0",
     "oxlint": "^0.18.0",
     "tinybench": "^6.0.0",

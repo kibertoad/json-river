@@ -23,7 +23,7 @@ import { JsonParser } from "../../src/parser.ts";
 import { JsonStringifier } from "../../src/stringifier.ts";
 import { JsonSerializer } from "../../src/serializer.ts";
 import { JsonDeserializer } from "../../src/deserializer.ts";
-import { forceGC, monitorHeap, formatHeapResult } from "./helpers.ts";
+import { forceGC, monitorHeap, formatHeapResult } from "memory-watchmen";
 
 const PADDING = "x".repeat(900);
 

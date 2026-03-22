@@ -16,7 +16,7 @@ import { pipeline } from "node:stream/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 import { JsonParser } from "../../src/parser.ts";
 import { JsonDeserializer } from "../../src/deserializer.ts";
-import { forceGC, monitorHeap, formatHeapResult } from "./helpers.ts";
+import { forceGC, monitorHeap, formatHeapResult } from "memory-watchmen";
 
 // ~1 KB payload per message — large enough to surface buffer growth over heap noise
 const PADDING = "x".repeat(900);
