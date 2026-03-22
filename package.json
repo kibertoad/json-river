@@ -25,7 +25,8 @@
     "profile:chart": "node bench/memory-profiler/chart.ts",
     "profile:compare": "node --expose-gc bench/memory-profiler/compare-picks.ts",
     "lint": "oxlint && oxfmt --check src/ test/ && tsc --noEmit",
-    "lint:fix": "oxfmt src/ test/"
+    "lint:fix": "oxfmt src/ test/",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
