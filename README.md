@@ -40,7 +40,7 @@ All measurements use 45.5 MB test files with 50,000 items, sampled via the [memo
 
 ### JSONL processing (many small documents)
 
-Test file: 50,000 newline-delimited JSON objects.
+Test file: 50,000 newline-delimited JSON objects (45.5 MB).
 
 | Approach | Pipeline | Heap delta | Wall time |
 |---|---|---|---|
@@ -55,9 +55,9 @@ Test file: 50,000 newline-delimited JSON objects.
 - **json-river uses ~60% less memory than `JSON.parse()`** for multi-document streams, because native JSON must read the entire file into a string first.
 - **json-river is ~7x faster than json-stream-es** on Node.js, due to native Transform streams and optimized token allocation.
 
-### API response processing (large array inside an object)
+### Large array inside an object
 
-Test file: `{"metadata": {...}, "data": [50,000 items], "total": N}`.
+Test file: `{"metadata": {...}, "data": [50,000 items], "total": N}` (45.5 MB).
 
 | Approach | What you get | Heap delta | Wall time |
 |---|---|---|---|
