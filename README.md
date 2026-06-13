@@ -494,10 +494,10 @@ Choose json-stream-es for Web Streams (browsers, Deno, Cloudflare Workers). Choo
 ## Scripts
 
 ```bash
-npm test                  # Unit tests
-npm run test:memory       # Memory leak tests (requires --expose-gc)
-npm run bench             # Performance benchmarks (vs. native JSON and json-stream-es)
-npm run profile:compare   # Memory comparison — pick modes (see PROFILING.md)
+pnpm test                  # Unit tests
+pnpm run test:memory       # Memory leak tests (requires --expose-gc)
+pnpm run bench             # Performance benchmarks (vs. native JSON and json-stream-es)
+pnpm run profile:compare   # Memory comparison — pick modes (see PROFILING.md)
 ```
 
 See [PROFILING.md](PROFILING.md) for the full profiling toolkit.
