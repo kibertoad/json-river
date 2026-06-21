@@ -21,7 +21,7 @@ All communication happens over HTTP as NDJSON (one JSON object per line). This i
 ### Generate test data
 
 ```bash
-npm run generate-data [small|medium|large|xlarge]
+pnpm run generate-data [small|medium|large|xlarge]
 ```
 
 Creates five types of test files per preset in `.test-data/`:
@@ -39,9 +39,9 @@ Presets: `small` (~1 MB), `medium` (~10 MB), `large` (~50 MB), `xlarge` (~200 MB
 ### Run a comparison
 
 ```bash
-npm run profile:compare                   # picks preset (named-array, pick modes)
-npm run profile:compare -- --preset=jsonl  # jsonl preset (streaming approaches)
-npm run profile:compare -- --save          # save results as new baseline
+pnpm run profile:compare                   # picks preset (named-array, pick modes)
+pnpm run profile:compare -- --preset=jsonl  # jsonl preset (streaming approaches)
+pnpm run profile:compare -- --save          # save results as new baseline
 ```
 
 Starts the profiler server, runs a predefined set of approaches against a test file, and prints results alongside the previous baseline (if any). Presets:
@@ -54,13 +54,13 @@ Starts the profiler server, runs a predefined set of approaches against a test f
 You can also specify a custom file and approach list:
 
 ```bash
-npm run profile:compare -- --approaches=native-json-parse,json-river-reformat .test-data/medium-jsonl.ndjson --multi
+pnpm run profile:compare -- --approaches=native-json-parse,json-river-reformat .test-data/medium-jsonl.ndjson --multi
 ```
 
 ### Start the profiler server standalone
 
 ```bash
-npm run profile:server
+pnpm run profile:server
 ```
 
 Starts the HTTP profiler on port 3847. Useful for ad-hoc profiling or the chart generator.
@@ -80,7 +80,7 @@ curl -X POST http://localhost:3847/profile \
 ### Generate an HTML chart
 
 ```bash
-npm run profile:chart -- <filePath> [--multi] [--path=data] [--approaches=a,b,c] [--output=results]
+pnpm run profile:chart -- <filePath> [--multi] [--path=data] [--approaches=a,b,c] [--output=results]
 ```
 
 Requires the profiler server running in another terminal. Runs each approach against the given file and writes results to the output directory:
@@ -94,17 +94,17 @@ Example:
 
 ```bash
 # Terminal 1:
-npm run profile:server
+pnpm run profile:server
 
 # Terminal 2:
-npm run profile:chart -- .test-data/large-named-array.json --path=data \
+pnpm run profile:chart -- .test-data/large-named-array.json --path=data \
   --approaches=native-json-parse,json-river-pick-shell-last --output=results
 ```
 
 ### Run the full profiler suite
 
 ```bash
-npm run profile [small|medium|large|xlarge]
+pnpm run profile [small|medium|large|xlarge]
 ```
 
 Runs all approaches against all test files for the given preset. Produces timestamped output in `.test-data/profile-results/`.
@@ -130,7 +130,7 @@ Runs all approaches against all test files for the given preset. Produces timest
 Separate from profiling, the project includes memory leak tests that verify heap stability under sustained load:
 
 ```bash
-npm run test:memory
+pnpm run test:memory
 ```
 
 These use `memory-watchmen`'s dual-metric leak detection:

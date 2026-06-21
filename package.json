@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Streaming versions of JSON.parse() and JSON.stringify()",
   "type": "module",
+  "packageManager": "pnpm@11.6.0",
   "engines": {
     "node": ">=22.0.0"
   },
@@ -26,7 +27,7 @@
     "profile:compare": "node --expose-gc bench/memory-profiler/compare-picks.ts",
     "lint": "oxlint && oxfmt --check src/ test/ && tsc --noEmit",
     "lint:fix": "oxfmt src/ test/",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "repository": {
     "type": "git",
